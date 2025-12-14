@@ -9,10 +9,6 @@ class AuthRemoteDataSource {
 
   AuthRemoteDataSource({required this.apiClient});
 
-  /// Realiza login con email y contraseña
-  /// Las credenciales se envían en los headers según la API:
-  /// X-Usuario: usuario
-  /// X-Password: contraseña
   Future<UserModel> login({
     required String email,
     required String password,
