@@ -7,24 +7,54 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:herramienta_case/core/network/api_client.dart';
+import 'package:herramienta_case/modules/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:herramienta_case/modules/auth/data/repositories/auth_repository.dart';
+import 'package:herramienta_case/modules/database_selector/data/datasources/database_remote_datasource.dart';
+import 'package:herramienta_case/modules/database_selector/data/repositories/database_repository.dart';
+import 'package:herramienta_case/modules/dynamic_crud/data/datasources/dynamic_remote_datasource.dart';
+import 'package:herramienta_case/modules/dynamic_crud/data/repositories/dynamic_crud_repository.dart';
 import 'package:herramienta_case/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App initialization test', (WidgetTester tester) async {
+    // Inicializar SharedPreferences con valores mock
+    SharedPreferences.setMockInitialValues({});
+    final sharedPreferences = await SharedPreferences.getInstance();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Crear instancias necesarias para el test
+    final apiClient = ApiClient();
+    final httpClient = http.Client();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Auth repository
+    final authRemoteDataSource = AuthRemoteDataSource(apiClient: apiClient);
+    final authRepository = AuthRepository(
+      remoteDataSource: authRemoteDataSource,
+      sharedPreferences: sharedPreferences,
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Database repository
+    final databaseRemoteDataSource = DatabaseRemoteDataSource(client: httpClient);
+    final databaseRepository = DatabaseRepository(
+      remoteDataSource: databaseRemoteDataSource,
+    );
+
+    // Dynamic CRUD repository
+    final dynamicRemoteDataSource = DynamicRemoteDataSource(client: httpClient);
+    final dynamicCrudRepository = DynamicCrudRepository(
+      remoteDataSource: dynamicRemoteDataSource,
+    );
+
+    // Construir la app con las dependencias necesarias
+    await tester.pumpWidget(MyApp(
+      authRepository: authRepository,
+      databaseRepository: databaseRepository,
+      dynamicCrudRepository: dynamicCrudRepository,
+    ));
+
+    // Verificar que la app se inicializa correctamente
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

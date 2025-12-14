@@ -1,0 +1,109 @@
+import 'package:flutter/material.dart';
+import 'package:herramienta_case/modules/auth/presentation/screens/login_screen.dart';
+import 'package:herramienta_case/modules/home/presentation/screens/home_screen.dart';
+import 'package:herramienta_case/modules/case_tools/presentation/screens/tools_list_screen.dart';
+import 'package:herramienta_case/modules/case_tools/presentation/screens/tool_detail_screen.dart';
+import 'package:herramienta_case/modules/database_selector/presentation/screens/database_selector_screen.dart';
+import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/tables_menu_screen.dart';
+import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/dynamic_list_screen.dart';
+import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/dynamic_form_screen.dart';
+
+class AppRoutes {
+  static const String selectDatabase = '/';
+  static const String login = '/login';
+  static const String home = '/home';
+  static const String tablesMenu = '/tables';
+  static const String toolsList = '/tools';
+  static const String toolDetail = '/tools/detail';
+
+  /// Mapa de rutas de la aplicación
+  static Map<String, WidgetBuilder> getRoutes() {
+    return {
+      selectDatabase: (context) => const DatabaseSelectorScreen(),
+      login: (context) => const LoginScreen(),
+      home: (context) => const HomeScreen(),
+      tablesMenu: (context) => const TablesMenuScreen(),
+      toolsList: (context) => const ToolsListScreen(),
+    };
+  }
+
+  /// Generador de rutas dinámicas para pasar argumentos
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    final uri = Uri.parse(settings.name ?? '');
+
+    if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'table') {
+      final tableName = uri.pathSegments[1];
+      return MaterialPageRoute(
+        builder: (context) => DynamicListScreen(tableName: tableName),
+      );
+    }
+
+    // Create route: /table/:tableName/create
+    if (uri.pathSegments.length == 3 &&
+        uri.pathSegments[0] == 'table' &&
+        uri.pathSegments[2] == 'create') {
+      final tableName = uri.pathSegments[1];
+      return MaterialPageRoute(
+        builder: (context) => DynamicFormScreen(
+          tableName: tableName,
+          isEdit: false,
+        ),
+      );
+    }
+
+    // Edit route: /table/:tableName/edit/:id
+    if (uri.pathSegments.length == 4 &&
+        uri.pathSegments[0] == 'table' &&
+        uri.pathSegments[2] == 'edit') {
+      final tableName = uri.pathSegments[1];
+      final recordId = uri.pathSegments[3];
+      return MaterialPageRoute(
+        builder: (context) => DynamicFormScreen(
+          tableName: tableName,
+          recordId: recordId,
+          isEdit: true,
+        ),
+      );
+    }
+
+    switch (settings.name) {
+      case toolDetail:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => ToolDetailScreen(
+            toolId: args?['toolId'] ?? 0,
+          ),
+        );
+      default:
+        return null;
+    }
+  }
+
+  /// Navegar a una ruta y limpiar el historial
+  static void navigateAndRemoveUntil(
+    BuildContext context,
+    String routeName,
+  ) {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      routeName,
+      (route) => false,
+    );
+  }
+
+  /// Navegar a una ruta
+  static Future<T?> navigateTo<T>(
+    BuildContext context,
+    String routeName, {
+    Object? arguments,
+  }) {
+    return Navigator.of(context).pushNamed<T>(
+      routeName,
+      arguments: arguments,
+    );
+  }
+
+  /// Retroceder a la pantalla anterior
+  static void goBack(BuildContext context, {Object? result}) {
+    Navigator.of(context).pop(result);
+  }
+}

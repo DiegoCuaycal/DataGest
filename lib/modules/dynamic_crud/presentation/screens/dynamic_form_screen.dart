@@ -1,0 +1,186 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/dynamic_crud_provider.dart';
+import '../providers/metadata_provider.dart';
+import '../../../database_selector/presentation/providers/database_selector_provider.dart';
+import '../../domain/services/form_generator_service.dart';
+
+class DynamicFormScreen extends StatefulWidget {
+  final String tableName;
+  final String? recordId;
+  final bool isEdit;
+
+  const DynamicFormScreen({
+    super.key,
+    required this.tableName,
+    this.recordId,
+    this.isEdit = false,
+  });
+
+  @override
+  State<DynamicFormScreen> createState() => _DynamicFormScreenState();
+}
+
+class _DynamicFormScreenState extends State<DynamicFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final Map<String, dynamic> _formData = {};
+  final FormGeneratorService _formGenerator = FormGeneratorService();
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEdit && widget.recordId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadRecord();
+      });
+    }
+  }
+
+  Future<void> _loadRecord() async {
+    final dbProvider = context.read<DatabaseSelectorProvider>();
+    final crudProvider = context.read<DynamicCrudProvider>();
+
+    if (dbProvider.currentDatabaseName != null && widget.recordId != null) {
+      await crudProvider.loadTableRecord(
+        databaseName: dbProvider.currentDatabaseName!,
+        tableName: widget.tableName,
+        id: widget.recordId!,
+        token: 'mock_token',
+      );
+
+      if (mounted && crudProvider.currentRecord != null) {
+        setState(() {
+          _formData.addAll(crudProvider.currentRecord!);
+        });
+      }
+    }
+  }
+
+  Future<void> _saveRecord() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final dbProvider = context.read<DatabaseSelectorProvider>();
+    final crudProvider = context.read<DynamicCrudProvider>();
+    final metadataProvider = context.read<MetadataProvider>();
+
+    final columns = metadataProvider.getColumnsForTable(widget.tableName);
+    final preparedData = _formGenerator.prepareDataForSubmit(
+      formData: _formData,
+      columns: columns,
+    );
+
+    bool success;
+    if (widget.isEdit && widget.recordId != null) {
+      success = await crudProvider.updateRecord(
+        databaseName: dbProvider.currentDatabaseName!,
+        tableName: widget.tableName,
+        id: widget.recordId!,
+        data: preparedData,
+        token: 'mock_token',
+      );
+    } else {
+      success = await crudProvider.createRecord(
+        databaseName: dbProvider.currentDatabaseName!,
+        tableName: widget.tableName,
+        data: preparedData,
+        token: 'mock_token',
+      );
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.isEdit ? 'Registro actualizado' : 'Registro creado'),
+          ),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(crudProvider.errorMessage ?? 'Error al guardar')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final metadataProvider = context.watch<MetadataProvider>();
+    final dbProvider = context.watch<DatabaseSelectorProvider>();
+    final crudProvider = context.watch<DynamicCrudProvider>();
+
+    if (widget.isEdit && crudProvider.isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('${widget.isEdit ? 'Editar' : 'Crear'} ${widget.tableName}'),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final metadata = metadataProvider.metadata;
+    if (metadata == null || dbProvider.currentDatabaseName == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('${widget.isEdit ? 'Editar' : 'Crear'} ${widget.tableName}'),
+        ),
+        body: const Center(child: Text('No se pudo cargar la metadata')),
+      );
+    }
+
+    final formFields = _formGenerator.generateForm(
+      tableName: widget.tableName,
+      metadata: metadata,
+      currentDatabase: dbProvider.currentDatabaseName!,
+      initialData: widget.isEdit ? _formData : null,
+      onFieldChanged: (fieldName, value) {
+        setState(() {
+          _formData[fieldName] = value;
+        });
+      },
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.isEdit ? 'Editar' : 'Crear'} ${widget.tableName}'),
+      ),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...formFields,
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _saveRecord,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(widget.isEdit ? 'Actualizar' : 'Crear'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

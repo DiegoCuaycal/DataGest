@@ -1,0 +1,144 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+class DynamicDatePicker extends StatefulWidget {
+  final String label;
+  final bool includeTime;
+  final bool isRequired;
+  final dynamic initialValue;
+  final Function(DateTime?) onChanged;
+
+  const DynamicDatePicker({
+    super.key,
+    required this.label,
+    this.includeTime = false,
+    this.isRequired = false,
+    this.initialValue,
+    required this.onChanged,
+  });
+
+  @override
+  State<DynamicDatePicker> createState() => _DynamicDatePickerState();
+}
+
+class _DynamicDatePickerState extends State<DynamicDatePicker> {
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialValue != null) {
+      if (widget.initialValue is DateTime) {
+        _selectedDate = widget.initialValue as DateTime;
+        _selectedTime = TimeOfDay.fromDateTime(_selectedDate!);
+      } else if (widget.initialValue is String) {
+        _selectedDate = DateTime.tryParse(widget.initialValue as String);
+        if (_selectedDate != null) {
+          _selectedTime = TimeOfDay.fromDateTime(_selectedDate!);
+        }
+      }
+    }
+    _controller = TextEditingController(text: _formatDateTime(_selectedDate));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _formatDateTime(DateTime? date) {
+    if (date == null) return '';
+    if (widget.includeTime) {
+      return DateFormat('dd/MM/yyyy HH:mm').format(date);
+    } else {
+      return DateFormat('dd/MM/yyyy').format(date);
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+
+      if (widget.includeTime) {
+        await _selectTime(context);
+      } else {
+        _controller.text = _formatDateTime(_selectedDate);
+        widget.onChanged(_selectedDate);
+      }
+    }
+  }
+
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
+    );
+
+    if (picked != null && _selectedDate != null) {
+      setState(() {
+        _selectedTime = picked;
+        _selectedDate = DateTime(
+          _selectedDate!.year,
+          _selectedDate!.month,
+          _selectedDate!.day,
+          picked.hour,
+          picked.minute,
+        );
+        _controller.text = _formatDateTime(_selectedDate);
+      });
+      widget.onChanged(_selectedDate);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: _controller,
+      decoration: InputDecoration(
+        labelText: widget.label,
+        border: const OutlineInputBorder(),
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.calendar_today),
+              onPressed: () => _selectDate(context),
+            ),
+            if (_selectedDate != null)
+              IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  setState(() {
+                    _selectedDate = null;
+                    _selectedTime = null;
+                    _controller.clear();
+                  });
+                  widget.onChanged(null);
+                },
+              ),
+          ],
+        ),
+      ),
+      readOnly: true,
+      onTap: () => _selectDate(context),
+      validator: (value) {
+        if (widget.isRequired && (value == null || value.isEmpty)) {
+          return 'Campo requerido';
+        }
+        return null;
+      },
+    );
+  }
+}

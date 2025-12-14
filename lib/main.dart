@@ -1,122 +1,210 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:herramienta_case/core/config/app_config.dart';
+import 'package:herramienta_case/core/config/env_config.dart';
+import 'package:herramienta_case/core/config/routes.dart';
+import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/network/api_client.dart';
+import 'package:herramienta_case/modules/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:herramienta_case/modules/auth/data/repositories/auth_repository.dart';
+import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
+import 'package:herramienta_case/modules/database_selector/data/datasources/database_remote_datasource.dart';
+import 'package:herramienta_case/modules/database_selector/data/repositories/database_repository.dart';
+import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
+import 'package:herramienta_case/modules/dynamic_crud/data/datasources/dynamic_remote_datasource.dart';
+import 'package:herramienta_case/modules/dynamic_crud/data/repositories/dynamic_crud_repository.dart';
+import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/metadata_provider.dart';
+import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/dynamic_crud_provider.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar variables de entorno
+  await EnvConfig.init();
+
+  // Inicializar SharedPreferences
+  final sharedPreferences = await SharedPreferences.getInstance();
+
+  // Inicializar ApiClient
+  final apiClient = ApiClient();
+  await apiClient.init();
+
+  // Inicializar HTTP client
+  final httpClient = http.Client();
+
+  // Inicializar repositorios
+  final authRemoteDataSource = AuthRemoteDataSource(apiClient: apiClient);
+  final authRepository = AuthRepository(
+    remoteDataSource: authRemoteDataSource,
+    sharedPreferences: sharedPreferences,
+  );
+
+  final databaseRemoteDataSource = DatabaseRemoteDataSource(client: httpClient);
+  final databaseRepository = DatabaseRepository(
+    remoteDataSource: databaseRemoteDataSource,
+  );
+
+  final dynamicRemoteDataSource = DynamicRemoteDataSource(client: httpClient);
+  final dynamicCrudRepository = DynamicCrudRepository(
+    remoteDataSource: dynamicRemoteDataSource,
+  );
+
+  runApp(MyApp(
+    authRepository: authRepository,
+    databaseRepository: databaseRepository,
+    dynamicCrudRepository: dynamicCrudRepository,
+  ));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final AuthRepository authRepository;
+  final DatabaseRepository databaseRepository;
+  final DynamicCrudRepository dynamicCrudRepository;
 
-  // This widget is the root of your application.
+  const MyApp({
+    super.key,
+    required this.authRepository,
+    required this.databaseRepository,
+    required this.dynamicCrudRepository,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => DatabaseSelectorProvider(
+            repository: databaseRepository,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(authRepository: authRepository)..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => MetadataProvider(
+            repository: dynamicCrudRepository,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => DynamicCrudProvider(
+            repository: dynamicCrudRepository,
+          ),
+        ),
+      ],
+      child: Consumer<AuthProvider>(
+        builder: (context, authProvider, _) {
+          return MaterialApp(
+            title: AppConfig.appName,
+            debugShowCheckedModeBanner: false,
+            theme: _buildTheme(),
+
+            // Ruta inicial: DatabaseSelector (sin autenticación)
+            initialRoute: AppRoutes.selectDatabase,
+
+            // Rutas de la aplicación
+            routes: AppRoutes.getRoutes(),
+            onGenerateRoute: AppRoutes.onGenerateRoute,
+          );
+        },
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
-}
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+  /// Construye el tema de la aplicación
+  ThemeData _buildTheme() {
+    return ThemeData(
+      primaryColor: AppColors.primary,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        secondary: AppColors.secondary,
+        error: AppColors.error,
+        surface: AppColors.surface,
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+      scaffoldBackgroundColor: AppColors.background,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
+        elevation: 0,
+        centerTitle: false,
+      ),
+      cardTheme: CardThemeData(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          elevation: 2,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary, width: 2),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: AppColors.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: AppColors.error, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.divider,
+        thickness: 1,
+      ),
+      useMaterial3: true,
     );
   }
 }
