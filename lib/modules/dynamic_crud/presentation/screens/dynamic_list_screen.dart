@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_strings.dart';
+import 'package:herramienta_case/core/constants/app_styles.dart';
+import 'package:herramienta_case/core/utils/notification_service.dart';
 import '../providers/dynamic_crud_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../../../database_selector/presentation/providers/database_selector_provider.dart';
@@ -46,8 +50,12 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     final pkInfo = metadataProvider.metadata?.getPrimaryKeysForTable(widget.tableName);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(widget.tableName),
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -58,23 +66,77 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
       body: Consumer<DynamicCrudProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (provider.errorMessage != null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(provider.errorMessage!),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadData,
-                    child: const Text('Reintentar'),
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                  const SizedBox(height: AppStyles.paddingMedium),
+                  Text(
+                    'Cargando registros...',
+                    style: AppStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
+              ),
+            );
+          }
+
+          if (provider.errorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.error,
+                        size: 64,
+                        color: AppColors.error,
+                      ),
+                    ),
+                    const SizedBox(height: AppStyles.paddingLarge),
+                    Text(
+                      'Error al cargar registros',
+                      style: AppStyles.heading3,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppStyles.paddingSmall),
+                    Text(
+                      provider.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: AppStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppStyles.paddingLarge),
+                    ElevatedButton.icon(
+                      onPressed: _loadData,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppStyles.paddingLarge,
+                          vertical: AppStyles.paddingMedium,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -84,11 +146,31 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.inbox_outlined,
+                      size: 64,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppStyles.paddingLarge),
                   Text(
                     'No hay registros',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                    style: AppStyles.heading3.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppStyles.paddingSmall),
+                  Text(
+                    'Agrega un nuevo registro usando el botón +',
+                    style: AppStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -151,6 +233,8 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
         onPressed: () {
           Navigator.pushNamed(context, '/table/${widget.tableName}/create');
         },
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
         child: const Icon(Icons.add),
       ),
     );
@@ -159,26 +243,16 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
   Future<void> _confirmDelete(Map<String, dynamic> record, String? pkColumn) async {
     if (pkColumn == null) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: const Text('¿Está seguro de eliminar este registro?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+    final confirmed = await NotificationService.showConfirmDialog(
+      context,
+      title: 'Confirmar eliminación',
+      message: '¿Está seguro de eliminar este registro?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      confirmColor: AppColors.error,
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed && mounted) {
       final dbProvider = context.read<DatabaseSelectorProvider>();
       final crudProvider = context.read<DynamicCrudProvider>();
 
@@ -191,13 +265,15 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registro eliminado exitosamente')),
+          NotificationService.showSuccess(
+            context,
+            'Registro eliminado exitosamente',
           );
           _loadData();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(crudProvider.errorMessage ?? 'Error al eliminar')),
+          NotificationService.showError(
+            context,
+            crudProvider.errorMessage ?? 'Error al eliminar',
           );
         }
       }

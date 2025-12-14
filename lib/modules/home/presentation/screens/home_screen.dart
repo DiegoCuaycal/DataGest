@@ -4,7 +4,7 @@ import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/config/routes.dart';
-import 'package:herramienta_case/core/utils/helpers.dart';
+import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 import 'package:herramienta_case/modules/home/presentation/widgets/home_drawer.dart';
 import 'package:herramienta_case/modules/home/presentation/widgets/home_card.dart';
@@ -33,45 +33,50 @@ class HomeScreen extends StatelessWidget {
             Consumer<AuthProvider>(
               builder: (context, authProvider, child) {
                 final userName = authProvider.currentUser?.nombre ?? 'Usuario';
-                return Card(
-                  elevation: AppStyles.elevationMedium,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppStyles.radiusMedium),
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                  decoration: AppStyles.cardGradientDecoration(
+                    colors: AppColors.primaryGradient,
+                    borderRadius: AppStyles.radiusLarge,
                   ),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppStyles.paddingLarge),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary,
-                          AppColors.primaryLight,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppStyles.paddingMedium),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+                        ),
+                        child: const Icon(
+                          Icons.person_outline,
+                          size: 40,
+                          color: AppColors.white,
+                        ),
                       ),
-                      borderRadius:
-                          BorderRadius.circular(AppStyles.radiusMedium),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${AppStrings.welcome},',
-                          style: AppStyles.bodyLarge.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.9),
-                          ),
+                      const SizedBox(width: AppStyles.paddingMedium),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${AppStrings.welcome},',
+                              style: AppStyles.bodyLarge.copyWith(
+                                color: AppColors.white.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              userName,
+                              style: AppStyles.heading2.copyWith(
+                                color: AppColors.white,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          userName,
-                          style: AppStyles.heading2.copyWith(
-                            color: AppColors.white,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -106,7 +111,7 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.category_outlined,
                   color: AppColors.secondary,
                   onTap: () {
-                    Helpers.showInfoSnackBar(
+                    NotificationService.showInfo(
                       context,
                       'Funcionalidad en desarrollo',
                     );
@@ -117,7 +122,7 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.assessment_outlined,
                   color: AppColors.success,
                   onTap: () {
-                    Helpers.showInfoSnackBar(
+                    NotificationService.showInfo(
                       context,
                       'Funcionalidad en desarrollo',
                     );
@@ -128,7 +133,7 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.settings_outlined,
                   color: AppColors.warning,
                   onTap: () {
-                    Helpers.showInfoSnackBar(
+                    NotificationService.showInfo(
                       context,
                       'Funcionalidad en desarrollo',
                     );

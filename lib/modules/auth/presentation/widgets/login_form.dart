@@ -4,6 +4,7 @@ import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/utils/helpers.dart';
+import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/core/config/routes.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 import 'package:herramienta_case/shared/widgets/custom_button.dart';
@@ -51,12 +52,12 @@ class _LoginFormState extends State<LoginForm> {
 
     if (success) {
       // Login exitoso - navegar al menú de tablas
-      Helpers.showSuccessSnackBar(context, AppStrings.successLogin);
+      NotificationService.showSuccess(context, AppStrings.successLogin);
       AppRoutes.navigateAndRemoveUntil(context, AppRoutes.tablesMenu);
     } else {
       // Login fallido - mostrar error
       final errorMessage = authProvider.errorMessage ?? AppStrings.errorGeneric;
-      Helpers.showErrorSnackBar(context, errorMessage);
+      NotificationService.showError(context, errorMessage);
     }
   }
 
@@ -121,7 +122,7 @@ class _LoginFormState extends State<LoginForm> {
                 text: AppStrings.forgotPassword,
                 onPressed: () {
                   // TODO: Implementar recuperación de contraseña
-                  Helpers.showInfoSnackBar(
+                  NotificationService.showInfo(
                     context,
                     'Funcionalidad en desarrollo',
                   );

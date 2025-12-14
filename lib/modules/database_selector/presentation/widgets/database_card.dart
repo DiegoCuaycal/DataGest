@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_styles.dart';
 import '../../data/models/database_info_model.dart';
 
 class DatabaseCard extends StatelessWidget {
@@ -13,56 +15,63 @@ class DatabaseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
+      decoration: AppStyles.modernCardDecoration(),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppStyles.paddingLarge),
           child: Row(
             children: [
               Container(
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: AppColors.primaryGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                 ),
-                child: Icon(
-                  Icons.storage,
+                child: const Icon(
+                  Icons.storage_rounded,
                   size: 32,
-                  color: Theme.of(context).primaryColor,
+                  color: AppColors.white,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppStyles.paddingMedium),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       database.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppStyles.heading4,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       database.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                      style: AppStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 20,
-                color: Colors.grey[400],
+              Container(
+                padding: const EdgeInsets.all(AppStyles.paddingSmall),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
               ),
             ],
           ),

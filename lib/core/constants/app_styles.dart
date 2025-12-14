@@ -167,6 +167,80 @@ class AppStyles {
     );
   }
 
+  // Decoración de Card con gradiente
+  static BoxDecoration cardGradientDecoration({
+    required List<Color> colors,
+    double? borderRadius,
+    bool withShadow = true,
+    AlignmentGeometry begin = Alignment.topLeft,
+    AlignmentGeometry end = Alignment.bottomRight,
+  }) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        colors: colors,
+        begin: begin,
+        end: end,
+      ),
+      borderRadius: BorderRadius.circular(borderRadius ?? radiusMedium),
+      boxShadow: withShadow
+          ? [
+              BoxShadow(
+                color: colors.first.withValues(alpha: 0.3),
+                blurRadius: elevationMedium,
+                offset: const Offset(0, 4),
+              ),
+            ]
+          : null,
+    );
+  }
+
+  // Decoración de Card elevada moderna
+  static BoxDecoration modernCardDecoration({
+    Color? color,
+    double? borderRadius,
+    bool withBorder = false,
+    Color? borderColor,
+  }) {
+    return BoxDecoration(
+      color: color ?? AppColors.surface,
+      borderRadius: BorderRadius.circular(borderRadius ?? radiusLarge),
+      border: withBorder
+          ? Border.all(color: borderColor ?? AppColors.divider, width: 1)
+          : null,
+      boxShadow: const [
+        BoxShadow(
+          color: AppColors.shadowLight,
+          blurRadius: 8,
+          offset: Offset(0, 2),
+        ),
+        BoxShadow(
+          color: AppColors.shadowLight,
+          blurRadius: 4,
+          offset: Offset(0, 1),
+        ),
+      ],
+    );
+  }
+
+  // Decoración de Card con efecto hover
+  static BoxDecoration hoverCardDecoration({
+    Color? color,
+    double? borderRadius,
+    bool isHovered = false,
+  }) {
+    return BoxDecoration(
+      color: color ?? AppColors.surface,
+      borderRadius: BorderRadius.circular(borderRadius ?? radiusLarge),
+      boxShadow: [
+        BoxShadow(
+          color: isHovered ? AppColors.shadowMedium : AppColors.shadowLight,
+          blurRadius: isHovered ? 12 : 8,
+          offset: Offset(0, isHovered ? 6 : 2),
+        ),
+      ],
+    );
+  }
+
   /// Constructor privado para evitar instanciación
   AppStyles._();
 }

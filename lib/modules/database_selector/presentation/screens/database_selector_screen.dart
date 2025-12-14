@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_styles.dart';
+import 'package:herramienta_case/core/utils/notification_service.dart';
 import '../providers/database_selector_provider.dart';
 import '../widgets/database_card.dart';
 
@@ -23,55 +26,90 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Seleccionar Base de Datos'),
         centerTitle: true,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
+        elevation: 0,
       ),
       body: Consumer<DatabaseSelectorProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                  const SizedBox(height: AppStyles.paddingMedium),
+                  Text(
+                    'Cargando bases de datos...',
+                    style: AppStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             );
           }
 
           if (provider.errorMessage != null) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red[300],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error al cargar bases de datos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[700],
+              child: Padding(
+                padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: AppColors.error,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    provider.errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
+                    const SizedBox(height: AppStyles.paddingLarge),
+                    Text(
+                      'Error al cargar bases de datos',
+                      style: AppStyles.heading3,
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      provider.loadAvailableDatabases(useMock: false);
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Reintentar'),
-                  ),
-                ],
+                    const SizedBox(height: AppStyles.paddingSmall),
+                    Text(
+                      provider.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: AppStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppStyles.paddingLarge),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        provider.loadAvailableDatabases(useMock: false);
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppStyles.paddingLarge,
+                          vertical: AppStyles.paddingMedium,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -81,17 +119,23 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.dns,
-                    size: 64,
-                    color: Colors.grey[400],
+                  Container(
+                    padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.dns,
+                      size: 64,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppStyles.paddingLarge),
                   Text(
                     'No hay bases de datos disponibles',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
+                    style: AppStyles.heading3.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -102,19 +146,27 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
           return Column(
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                padding: const EdgeInsets.all(AppStyles.paddingMedium),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: AppColors.primaryGradient,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.info_outline,
-                      color: Theme.of(context).primaryColor,
+                      color: AppColors.white,
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
+                    const SizedBox(width: AppStyles.paddingMedium),
+                    Expanded(
                       child: Text(
                         'Selecciona una base de datos para comenzar',
-                        style: TextStyle(fontSize: 14),
+                        style: AppStyles.bodyMedium.copyWith(
+                          color: AppColors.white,
+                        ),
                       ),
                     ),
                   ],
@@ -122,7 +174,7 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.all(AppStyles.paddingMedium),
                   itemCount: provider.availableDatabases.length,
                   itemBuilder: (context, index) {
                     final database = provider.availableDatabases[index];
@@ -130,7 +182,10 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
                       database: database,
                       onTap: () {
                         provider.selectDatabase(database);
-                        // Navigate to login screen
+                        NotificationService.showSuccess(
+                          context,
+                          'Base de datos "${database.name}" seleccionada',
+                        );
                         Navigator.pushNamed(context, '/login');
                       },
                     );
