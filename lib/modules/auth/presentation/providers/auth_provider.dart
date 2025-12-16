@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:herramienta_case/modules/auth/data/repositories/auth_repository.dart';
 import 'package:herramienta_case/modules/auth/domain/entities/user_entity.dart';
 import 'package:herramienta_case/shared/providers/app_provider.dart';

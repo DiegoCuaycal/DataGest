@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_icons.dart';
 import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/config/routes.dart';
@@ -49,7 +50,7 @@ class HomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
                         ),
                         child: const Icon(
-                          Icons.person_outline,
+                          AppIcons.person,
                           size: 40,
                           color: AppColors.white,
                         ),
@@ -85,7 +86,7 @@ class HomeScreen extends StatelessWidget {
 
             // Título de sección
             Text(
-              'Accesos Rápidos',
+              AppStrings.quickAccess,
               style: AppStyles.heading3,
             ),
             const SizedBox(height: AppStyles.paddingMedium),
@@ -100,42 +101,42 @@ class HomeScreen extends StatelessWidget {
               children: [
                 HomeCard(
                   title: AppStrings.tools,
-                  icon: Icons.build_outlined,
+                  icon: AppIcons.tool,
                   color: AppColors.primary,
                   onTap: () {
                     AppRoutes.navigateTo(context, AppRoutes.toolsList);
                   },
                 ),
                 HomeCard(
-                  title: 'Categorías',
-                  icon: Icons.category_outlined,
+                  title: AppStrings.categories,
+                  icon: AppIcons.category,
                   color: AppColors.secondary,
                   onTap: () {
                     NotificationService.showInfo(
                       context,
-                      'Funcionalidad en desarrollo',
+                      AppStrings.featureInDevelopment,
                     );
                   },
                 ),
                 HomeCard(
-                  title: 'Reportes',
-                  icon: Icons.assessment_outlined,
+                  title: AppStrings.reports,
+                  icon: AppIcons.report,
                   color: AppColors.success,
                   onTap: () {
                     NotificationService.showInfo(
                       context,
-                      'Funcionalidad en desarrollo',
+                      AppStrings.featureInDevelopment,
                     );
                   },
                 ),
                 HomeCard(
-                  title: 'Configuración',
-                  icon: Icons.settings_outlined,
+                  title: AppStrings.configuration,
+                  icon: AppIcons.settings,
                   color: AppColors.warning,
                   onTap: () {
                     NotificationService.showInfo(
                       context,
-                      'Funcionalidad en desarrollo',
+                      AppStrings.featureInDevelopment,
                     );
                   },
                 ),

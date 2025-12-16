@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_icons.dart';
 import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/config/routes.dart';
@@ -66,7 +67,7 @@ class HomeDrawer extends StatelessWidget {
               children: [
                 _buildDrawerItem(
                   context,
-                  icon: Icons.home_outlined,
+                  icon: AppIcons.home,
                   title: AppStrings.home,
                   onTap: () {
                     Navigator.pop(context);
@@ -74,7 +75,7 @@ class HomeDrawer extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   context,
-                  icon: Icons.build_outlined,
+                  icon: AppIcons.tool,
                   title: AppStrings.tools,
                   onTap: () {
                     Navigator.pop(context);
@@ -83,38 +84,38 @@ class HomeDrawer extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   context,
-                  icon: Icons.category_outlined,
-                  title: 'Categorías',
+                  icon: AppIcons.category,
+                  title: AppStrings.categories,
                   onTap: () {
                     Navigator.pop(context);
                     Helpers.showInfoSnackBar(
                       context,
-                      'Funcionalidad en desarrollo',
+                      AppStrings.featureInDevelopment,
                     );
                   },
                 ),
                 const Divider(),
                 _buildDrawerItem(
                   context,
-                  icon: Icons.settings_outlined,
-                  title: 'Configuración',
+                  icon: AppIcons.settings,
+                  title: AppStrings.configuration,
                   onTap: () {
                     Navigator.pop(context);
                     Helpers.showInfoSnackBar(
                       context,
-                      'Funcionalidad en desarrollo',
+                      AppStrings.featureInDevelopment,
                     );
                   },
                 ),
                 _buildDrawerItem(
                   context,
-                  icon: Icons.help_outline,
-                  title: 'Ayuda',
+                  icon: AppIcons.help,
+                  title: AppStrings.help,
                   onTap: () {
                     Navigator.pop(context);
                     Helpers.showInfoSnackBar(
                       context,
-                      'Funcionalidad en desarrollo',
+                      AppStrings.featureInDevelopment,
                     );
                   },
                 ),
@@ -126,7 +127,7 @@ class HomeDrawer extends StatelessWidget {
           const Divider(),
           _buildDrawerItem(
             context,
-            icon: Icons.logout,
+            icon: AppIcons.logout,
             title: AppStrings.logout,
             textColor: AppColors.error,
             onTap: () async {

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_icons.dart';
+import 'package:herramienta_case/core/constants/app_strings.dart';
+import 'package:herramienta_case/core/constants/app_styles.dart';
 
 class DynamicDatePicker extends StatefulWidget {
   final String label;
@@ -106,19 +110,25 @@ class _DynamicDatePickerState extends State<DynamicDatePicker> {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: _controller,
-      decoration: InputDecoration(
+      decoration: AppStyles.inputDecoration(
         labelText: widget.label,
-        border: const OutlineInputBorder(),
+      ).copyWith(
         suffixIcon: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.calendar_today),
+              icon: const Icon(
+                AppIcons.calendar,
+                color: AppColors.primary,
+              ),
               onPressed: () => _selectDate(context),
             ),
             if (_selectedDate != null)
               IconButton(
-                icon: const Icon(Icons.clear),
+                icon: const Icon(
+                  AppIcons.clear,
+                  color: AppColors.textSecondary,
+                ),
                 onPressed: () {
                   setState(() {
                     _selectedDate = null;
@@ -135,7 +145,7 @@ class _DynamicDatePickerState extends State<DynamicDatePicker> {
       onTap: () => _selectDate(context),
       validator: (value) {
         if (widget.isRequired && (value == null || value.isEmpty)) {
-          return 'Campo requerido';
+          return AppStrings.requiredFieldMessage;
         }
         return null;
       },

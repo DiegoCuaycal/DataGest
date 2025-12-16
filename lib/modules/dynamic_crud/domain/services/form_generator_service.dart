@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../data/models/column_info_model.dart';
-import '../../data/models/foreign_key_model.dart';
 import '../../data/models/database_metadata_model.dart';
 import '../../../../shared/widgets/dynamic_fields/dynamic_text_field.dart';
 import '../../../../shared/widgets/dynamic_fields/dynamic_number_field.dart';

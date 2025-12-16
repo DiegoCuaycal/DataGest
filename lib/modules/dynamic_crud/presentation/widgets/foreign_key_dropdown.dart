@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_icons.dart';
+import 'package:herramienta_case/core/constants/app_strings.dart';
+import 'package:herramienta_case/core/constants/app_styles.dart';
 import '../../data/models/dropdown_item_model.dart';
 import '../providers/dynamic_crud_provider.dart';
 
@@ -71,15 +75,17 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return InputDecorator(
-        decoration: InputDecoration(
+        decoration: AppStyles.inputDecoration(
           labelText: widget.label,
-          border: const OutlineInputBorder(),
         ),
         child: const Center(
           child: SizedBox(
             height: 20,
             width: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
           ),
         ),
       );
@@ -87,25 +93,31 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
 
     if (_errorMessage != null) {
       return InputDecorator(
-        decoration: InputDecoration(
+        decoration: AppStyles.inputDecoration(
           labelText: widget.label,
-          border: const OutlineInputBorder(),
-          errorText: 'Error al cargar datos',
+          errorText: AppStrings.errorLoadingData,
         ),
         child: Row(
           children: [
-            const Icon(Icons.error, color: Colors.red, size: 20),
-            const SizedBox(width: 8),
+            const Icon(
+              AppIcons.error,
+              color: AppColors.error,
+              size: 20,
+            ),
+            const SizedBox(width: AppStyles.paddingSmall),
             Expanded(
               child: Text(
                 _errorMessage!,
-                style: const TextStyle(fontSize: 12, color: Colors.red),
+                style: AppStyles.bodySmall.copyWith(
+                  color: AppColors.error,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.refresh, size: 20),
+              icon: const Icon(AppIcons.refresh, size: 20),
               onPressed: _loadDropdownData,
+              color: AppColors.primary,
             ),
           ],
         ),
@@ -113,20 +125,22 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
     }
 
     return DropdownButtonFormField<dynamic>(
-      decoration: InputDecoration(
+      decoration: AppStyles.inputDecoration(
         labelText: widget.label,
-        border: const OutlineInputBorder(),
       ),
       initialValue: widget.initialValue,
       items: _items.map((item) {
         return DropdownMenuItem<dynamic>(
           value: item.id,
-          child: Text(item.displayValue),
+          child: Text(
+            item.displayValue,
+            style: AppStyles.bodyMedium,
+          ),
         );
       }).toList(),
       onChanged: widget.onChanged,
       validator: widget.isRequired
-          ? (value) => value == null ? 'Campo requerido' : null
+          ? (value) => value == null ? AppStrings.requiredFieldMessage : null
           : null,
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_icons.dart';
 import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
@@ -58,7 +59,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(AppIcons.refresh),
             onPressed: _loadData,
           ),
         ],
@@ -75,7 +76,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                   ),
                   const SizedBox(height: AppStyles.paddingMedium),
                   Text(
-                    'Cargando registros...',
+                    AppStrings.loadingRecords,
                     style: AppStyles.bodyMedium.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -99,14 +100,14 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.error,
+                        AppIcons.error,
                         size: 64,
                         color: AppColors.error,
                       ),
                     ),
                     const SizedBox(height: AppStyles.paddingLarge),
                     Text(
-                      'Error al cargar registros',
+                      AppStrings.errorLoadingRecords,
                       style: AppStyles.heading3,
                       textAlign: TextAlign.center,
                     ),
@@ -121,8 +122,8 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                     const SizedBox(height: AppStyles.paddingLarge),
                     ElevatedButton.icon(
                       onPressed: _loadData,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reintentar'),
+                      icon: const Icon(AppIcons.refresh),
+                      label: const Text(AppStrings.retry),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.white,
@@ -153,21 +154,21 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.inbox_outlined,
+                      AppIcons.empty,
                       size: 64,
                       color: AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: AppStyles.paddingLarge),
                   Text(
-                    'No hay registros',
+                    AppStrings.noRecords,
                     style: AppStyles.heading3.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: AppStyles.paddingSmall),
                   Text(
-                    'Agrega un nuevo registro usando el botón +',
+                    AppStrings.addNewRecord,
                     style: AppStyles.bodyMedium.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -203,7 +204,11 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.edit, size: 20),
+                                icon: const Icon(
+                                  AppIcons.edit,
+                                  size: 20,
+                                  color: AppColors.primary,
+                                ),
                                 onPressed: () {
                                   final pk = pkInfo?.first.column;
                                   if (pk != null) {
@@ -215,7 +220,11 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                                 },
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                icon: const Icon(
+                                  AppIcons.delete,
+                                  size: 20,
+                                  color: AppColors.error,
+                                ),
                                 onPressed: () => _confirmDelete(record, pkInfo?.first.column),
                               ),
                             ],
@@ -235,7 +244,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
         },
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
-        child: const Icon(Icons.add),
+        child: const Icon(AppIcons.add),
       ),
     );
   }
@@ -245,10 +254,10 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
 
     final confirmed = await NotificationService.showConfirmDialog(
       context,
-      title: 'Confirmar eliminación',
-      message: '¿Está seguro de eliminar este registro?',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+      title: AppStrings.delete,
+      message: AppStrings.confirmDeleteRecord,
+      confirmText: AppStrings.delete,
+      cancelText: AppStrings.cancel,
       confirmColor: AppColors.error,
     );
 
@@ -267,13 +276,13 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
         if (success) {
           NotificationService.showSuccess(
             context,
-            'Registro eliminado exitosamente',
+            AppStrings.successDelete,
           );
           _loadData();
         } else {
           NotificationService.showError(
             context,
-            crudProvider.errorMessage ?? 'Error al eliminar',
+            crudProvider.errorMessage ?? AppStrings.errorGeneric,
           );
         }
       }

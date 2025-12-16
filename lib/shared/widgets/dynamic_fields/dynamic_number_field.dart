@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:herramienta_case/core/constants/app_strings.dart';
+import 'package:herramienta_case/core/constants/app_styles.dart';
 
 class DynamicNumberField extends StatelessWidget {
   final String label;
@@ -24,9 +26,8 @@ class DynamicNumberField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       initialValue: controller == null ? initialValue?.toString() : null,
-      decoration: InputDecoration(
+      decoration: AppStyles.inputDecoration(
         labelText: label,
-        border: const OutlineInputBorder(),
       ),
       keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
       inputFormatters: [
@@ -46,7 +47,7 @@ class DynamicNumberField extends StatelessWidget {
       },
       validator: (value) {
         if (isRequired && (value == null || value.isEmpty)) {
-          return 'Campo requerido';
+          return AppStrings.requiredFieldMessage;
         }
         if (value != null && value.isNotEmpty) {
           if (allowDecimal) {

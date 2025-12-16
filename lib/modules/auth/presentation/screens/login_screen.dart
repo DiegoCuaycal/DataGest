@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_icons.dart';
 import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/modules/auth/presentation/widgets/login_form.dart';
@@ -19,9 +20,9 @@ class LoginScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Iniciar Sesión'),
+        title: const Text(AppStrings.login),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(AppIcons.back),
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,
@@ -43,29 +44,29 @@ class LoginScreen extends StatelessWidget {
 
                   // Logo o icono de la app
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(AppStyles.paddingMedium),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.architecture_outlined,
+                      AppIcons.architecture,
                       size: 64,
                       color: AppColors.primary,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppStyles.paddingLarge),
 
                   // Mostrar BD seleccionada
                   if (dbProvider.selectedDatabase != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: AppStyles.paddingMedium,
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
                         border: Border.all(
                           color: AppColors.primary.withValues(alpha: 0.3),
                           width: 1,
@@ -76,18 +77,16 @@ class LoginScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
-                            Icons.storage,
+                            AppIcons.database,
                             size: 18,
                             color: AppColors.primary,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppStyles.paddingSmall),
                           Flexible(
                             child: Text(
                               dbProvider.selectedDatabase!.name,
-                              style: const TextStyle(
-                                fontSize: 14,
+                              style: AppStyles.bodyMedium.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -118,17 +117,9 @@ class LoginScreen extends StatelessWidget {
 
                   // Card con formulario
                   Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                    padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                    decoration: AppStyles.modernCardDecoration(
+                      borderRadius: AppStyles.radiusXLarge,
                     ),
                     child: const LoginForm(),
                   ),

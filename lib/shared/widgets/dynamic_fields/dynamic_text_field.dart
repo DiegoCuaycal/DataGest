@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:herramienta_case/core/constants/app_strings.dart';
+import 'package:herramienta_case/core/constants/app_styles.dart';
 
 class DynamicTextField extends StatelessWidget {
   final String label;
@@ -25,9 +27,9 @@ class DynamicTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       initialValue: controller == null ? initialValue : null,
-      decoration: InputDecoration(
+      decoration: AppStyles.inputDecoration(
         labelText: label,
-        border: const OutlineInputBorder(),
+      ).copyWith(
         counterText: maxLength != null ? '' : null,
       ),
       maxLength: maxLength,
@@ -35,7 +37,7 @@ class DynamicTextField extends StatelessWidget {
       onChanged: onChanged,
       validator: (value) {
         if (isRequired && (value == null || value.isEmpty)) {
-          return 'Campo requerido';
+          return AppStrings.requiredFieldMessage;
         }
         if (maxLength != null && value != null && value.length > maxLength!) {
           return 'Máximo $maxLength caracteres';

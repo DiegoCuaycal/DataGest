@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:herramienta_case/core/constants/app_colors.dart';
+import 'package:herramienta_case/core/constants/app_strings.dart';
+import 'package:herramienta_case/core/constants/app_styles.dart';
 
 class DynamicDropdown extends StatelessWidget {
   final String label;
@@ -22,31 +25,32 @@ class DynamicDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoading) {
       return InputDecorator(
-        decoration: InputDecoration(
+        decoration: AppStyles.inputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
         ),
         child: const Center(
           child: SizedBox(
             height: 20,
             width: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
           ),
         ),
       );
     }
 
     return DropdownButtonFormField(
-      decoration: InputDecoration(
+      decoration: AppStyles.inputDecoration(
         labelText: label,
-        border: const OutlineInputBorder(),
       ),
       initialValue: value,
       items: items,
       onChanged: onChanged,
       validator: (value) {
         if (isRequired && value == null) {
-          return 'Campo requerido';
+          return AppStrings.requiredFieldMessage;
         }
         return null;
       },

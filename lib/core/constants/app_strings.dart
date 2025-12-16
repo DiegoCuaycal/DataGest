@@ -64,6 +64,42 @@ class AppStrings {
   // Confirmaciones
   static const String confirmDelete = '¿Estás seguro de eliminar este elemento?';
   static const String confirmLogout = '¿Estás seguro de cerrar sesión?';
+  static const String confirmDeleteRecord = '¿Está seguro de eliminar este registro?';
+
+  // Menú y navegación
+  static const String categories = 'Categorías';
+  static const String configuration = 'Configuración';
+  static const String help = 'Ayuda';
+  static const String quickAccess = 'Accesos Rápidos';
+  static const String reports = 'Reportes';
+
+  // Base de datos
+  static const String database = 'Base de Datos';
+  static const String selectDatabase = 'Seleccionar Base de Datos';
+  static const String selectedDatabase = 'Base de Datos Seleccionada';
+  static const String tables = 'Tablas';
+  static const String records = 'registros';
+  static const String record = 'registro';
+
+  // Estados de datos
+  static const String noRecords = 'No hay registros';
+  static const String addNewRecord = 'Agrega un nuevo registro usando el botón +';
+  static const String loadingRecords = 'Cargando registros...';
+  static const String errorLoadingRecords = 'Error al cargar registros';
+  static const String errorLoadingData = 'Error al cargar datos';
+
+  // Acciones de tabla
+  static const String actions = 'Acciones';
+  static const String create = 'Crear';
+  static const String update = 'Actualizar';
+  static const String view = 'Ver';
+
+  // Mensajes de validación adicionales
+  static const String requiredFieldMessage = 'Campo requerido';
+  static const String maxLengthMessage = 'Máximo {0} caracteres';
+
+  // Desarrollo
+  static const String featureInDevelopment = 'Funcionalidad en desarrollo';
 
   /// Constructor privado para evitar instanciación
   AppStrings._();
