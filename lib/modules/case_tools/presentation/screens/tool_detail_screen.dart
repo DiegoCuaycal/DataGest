@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/utils/helpers.dart';
+import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/modules/case_tools/data/repositories/tool_repository.dart';
 import 'package:herramienta_case/modules/case_tools/domain/entities/tool_entity.dart';
 import 'package:herramienta_case/shared/widgets/loading_indicator.dart';
@@ -42,7 +43,7 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        Helpers.showErrorSnackBar(
+        NotificationService.showError(
           context,
           'Error al cargar la herramienta',
         );
@@ -145,7 +146,7 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
                                 icon: Icons.link,
                                 child: InkWell(
                                   onTap: () {
-                                    Helpers.showInfoSnackBar(
+                                    NotificationService.showInfo(
                                       context,
                                       'Abriendo ${_tool!.url}',
                                     );
@@ -182,7 +183,7 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     onPressed: () {
-                                      Helpers.showInfoSnackBar(
+                                      NotificationService.showInfo(
                                         context,
                                         'Funcionalidad en desarrollo',
                                       );
@@ -195,7 +196,7 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: () {
-                                      Helpers.showInfoSnackBar(
+                                      NotificationService.showInfo(
                                         context,
                                         'Funcionalidad en desarrollo',
                                       );

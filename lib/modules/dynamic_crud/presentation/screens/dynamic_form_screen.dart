@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/dynamic_crud_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../../../database_selector/presentation/providers/database_selector_provider.dart';
+import '../../../home/presentation/providers/recent_activity_provider.dart';
 import '../../domain/services/form_generator_service.dart';
 
 class DynamicFormScreen extends StatefulWidget {
@@ -100,6 +101,12 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
     if (mounted) {
       if (success) {
+        // Registrar actividad
+        context.read<RecentActivityProvider>().addActivity(
+              tableName: widget.tableName,
+              action: widget.isEdit ? 'update' : 'create',
+            );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.isEdit ? 'Registro actualizado' : 'Registro creado'),

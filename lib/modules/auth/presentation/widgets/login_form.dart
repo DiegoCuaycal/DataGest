@@ -51,9 +51,9 @@ class _LoginFormState extends State<LoginForm> {
     if (!mounted) return;
 
     if (success) {
-      // Login exitoso - navegar al menú de tablas
+      // Login exitoso - navegar al Home Dashboard
       NotificationService.showSuccess(context, AppStrings.successLogin);
-      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.tablesMenu);
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
     } else {
       // Login fallido - mostrar error
       final errorMessage = authProvider.errorMessage ?? AppStrings.errorGeneric;

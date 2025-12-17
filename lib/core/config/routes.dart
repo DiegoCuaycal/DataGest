@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:herramienta_case/modules/auth/presentation/screens/login_screen.dart';
-import 'package:herramienta_case/modules/home/presentation/screens/home_screen.dart';
+import 'package:herramienta_case/modules/home/presentation/screens/new_home_screen.dart';
 import 'package:herramienta_case/modules/case_tools/presentation/screens/tools_list_screen.dart';
 import 'package:herramienta_case/modules/case_tools/presentation/screens/tool_detail_screen.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/screens/database_selector_screen.dart';
@@ -21,7 +21,7 @@ class AppRoutes {
     return {
       selectDatabase: (context) => const DatabaseSelectorScreen(),
       login: (context) => const LoginScreen(),
-      home: (context) => const HomeScreen(),
+      home: (context) => const NewHomeScreen(),
       tablesMenu: (context) => const TablesMenuScreen(),
       toolsList: (context) => const ToolsListScreen(),
     };

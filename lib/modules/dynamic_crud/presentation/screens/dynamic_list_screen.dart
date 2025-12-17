@@ -8,6 +8,7 @@ import 'package:herramienta_case/core/utils/notification_service.dart';
 import '../providers/dynamic_crud_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../../../database_selector/presentation/providers/database_selector_provider.dart';
+import '../../../home/presentation/providers/recent_activity_provider.dart';
 
 class DynamicListScreen extends StatefulWidget {
   final String tableName;
@@ -27,7 +28,15 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      _registerActivity();
     });
+  }
+
+  void _registerActivity() {
+    context.read<RecentActivityProvider>().addActivity(
+          tableName: widget.tableName,
+          action: 'view',
+        );
   }
 
   void _loadData() {

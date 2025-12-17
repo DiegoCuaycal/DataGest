@@ -5,7 +5,7 @@ import 'package:herramienta_case/core/constants/app_icons.dart';
 import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/config/routes.dart';
-import 'package:herramienta_case/core/utils/helpers.dart';
+import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 
 /// Drawer (menú lateral) del home
@@ -88,7 +88,7 @@ class HomeDrawer extends StatelessWidget {
                   title: AppStrings.categories,
                   onTap: () {
                     Navigator.pop(context);
-                    Helpers.showInfoSnackBar(
+                    NotificationService.showInfo(
                       context,
                       AppStrings.featureInDevelopment,
                     );
@@ -101,7 +101,7 @@ class HomeDrawer extends StatelessWidget {
                   title: AppStrings.configuration,
                   onTap: () {
                     Navigator.pop(context);
-                    Helpers.showInfoSnackBar(
+                    NotificationService.showInfo(
                       context,
                       AppStrings.featureInDevelopment,
                     );
@@ -113,7 +113,7 @@ class HomeDrawer extends StatelessWidget {
                   title: AppStrings.help,
                   onTap: () {
                     Navigator.pop(context);
-                    Helpers.showInfoSnackBar(
+                    NotificationService.showInfo(
                       context,
                       AppStrings.featureInDevelopment,
                     );
@@ -131,12 +131,13 @@ class HomeDrawer extends StatelessWidget {
             title: AppStrings.logout,
             textColor: AppColors.error,
             onTap: () async {
-              final confirmed = await Helpers.showConfirmDialog(
+              final confirmed = await NotificationService.showConfirmDialog(
                 context,
                 title: AppStrings.logout,
                 message: AppStrings.confirmLogout,
                 confirmText: AppStrings.logout,
                 cancelText: AppStrings.cancel,
+                confirmColor: AppColors.error,
               );
 
               if (confirmed && context.mounted) {
@@ -146,7 +147,7 @@ class HomeDrawer extends StatelessWidget {
                 if (context.mounted) {
                   AppRoutes.navigateAndRemoveUntil(
                     context,
-                    AppRoutes.login,
+                    AppRoutes.selectDatabase,
                   );
                 }
               }

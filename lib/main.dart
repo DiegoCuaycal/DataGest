@@ -17,6 +17,7 @@ import 'package:herramienta_case/modules/dynamic_crud/data/datasources/dynamic_r
 import 'package:herramienta_case/modules/dynamic_crud/data/repositories/dynamic_crud_repository.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/metadata_provider.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/dynamic_crud_provider.dart';
+import 'package:herramienta_case/modules/home/presentation/providers/recent_activity_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,6 +92,9 @@ class MyApp extends StatelessWidget {
           create: (_) => DynamicCrudProvider(
             repository: dynamicCrudRepository,
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => RecentActivityProvider()..init(),
         ),
       ],
       child: Consumer<AuthProvider>(
