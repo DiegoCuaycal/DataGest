@@ -7,6 +7,7 @@ import 'package:herramienta_case/modules/database_selector/presentation/screens/
 import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/tables_menu_screen.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/dynamic_list_screen.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/dynamic_form_screen.dart';
+import 'package:herramienta_case/modules/notifications/presentation/screens/notifications_screen.dart';
 
 class AppRoutes {
   static const String selectDatabase = '/';
@@ -15,6 +16,7 @@ class AppRoutes {
   static const String tablesMenu = '/tables';
   static const String toolsList = '/tools';
   static const String toolDetail = '/tools/detail';
+  static const String notifications = '/notifications';
 
   /// Mapa de rutas de la aplicación
   static Map<String, WidgetBuilder> getRoutes() {
@@ -24,6 +26,7 @@ class AppRoutes {
       home: (context) => const NewHomeScreen(),
       tablesMenu: (context) => const TablesMenuScreen(),
       toolsList: (context) => const ToolsListScreen(),
+      notifications: (context) => const NotificationsScreen(),
     };
   }
 

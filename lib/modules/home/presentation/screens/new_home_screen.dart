@@ -17,6 +17,7 @@ import 'package:herramienta_case/modules/home/presentation/widgets/stat_card.dar
 import 'package:herramienta_case/modules/home/presentation/widgets/quick_action_button.dart';
 import 'package:herramienta_case/modules/home/presentation/widgets/featured_table_card.dart';
 import 'package:herramienta_case/modules/home/presentation/widgets/recent_activity_item.dart';
+import 'package:herramienta_case/modules/notifications/presentation/providers/notification_provider.dart';
 
 /// Pantalla principal (Home) rediseñada profesionalmente
 class NewHomeScreen extends StatefulWidget {
@@ -115,12 +116,52 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
           onPressed: _loadMetadata,
           tooltip: 'Actualizar',
         ),
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () {
-            NotificationService.showInfo(context, AppStrings.featureInDevelopment);
+        Consumer<NotificationProvider>(
+          builder: (context, notificationProvider, _) {
+            final hasUnread = notificationProvider.hasUnread;
+            final unreadCount = notificationProvider.unreadCount;
+
+            return Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    AppRoutes.navigateTo(context, AppRoutes.notifications);
+                  },
+                  tooltip: 'Notificaciones',
+                ),
+                if (hasUnread)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.white,
+                          width: 2,
+                        ),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            );
           },
-          tooltip: 'Notificaciones',
         ),
       ],
     );

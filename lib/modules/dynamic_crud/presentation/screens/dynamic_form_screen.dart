@@ -4,6 +4,7 @@ import '../providers/dynamic_crud_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../../../database_selector/presentation/providers/database_selector_provider.dart';
 import '../../../home/presentation/providers/recent_activity_provider.dart';
+import '../../../notifications/presentation/providers/notification_provider.dart';
 import '../../domain/services/form_generator_service.dart';
 
 class DynamicFormScreen extends StatefulWidget {
@@ -107,16 +108,42 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
               action: widget.isEdit ? 'update' : 'create',
             );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.isEdit ? 'Registro actualizado' : 'Registro creado'),
-          ),
-        );
-        Navigator.pop(context);
+        // Crear notificación
+        final notificationProvider = context.read<NotificationProvider>();
+        if (widget.isEdit) {
+          await notificationProvider.notifySuccess(
+            'Registro actualizado',
+            'El registro en la tabla ${widget.tableName} fue actualizado exitosamente',
+            actionRoute: '/table/${widget.tableName}',
+          );
+        } else {
+          await notificationProvider.notifySuccess(
+            'Registro creado',
+            'Se creó un nuevo registro en la tabla ${widget.tableName}',
+            actionRoute: '/table/${widget.tableName}',
+          );
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(widget.isEdit ? 'Registro actualizado' : 'Registro creado'),
+            ),
+          );
+          Navigator.pop(context);
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(crudProvider.errorMessage ?? 'Error al guardar')),
+        // Notificación de error
+        await context.read<NotificationProvider>().notifyError(
+          'Error al guardar',
+          crudProvider.errorMessage ?? 'Ocurrió un error al intentar guardar el registro',
         );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(crudProvider.errorMessage ?? 'Error al guardar')),
+          );
+        }
       }
     }
   }

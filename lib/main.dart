@@ -18,6 +18,7 @@ import 'package:herramienta_case/modules/dynamic_crud/data/repositories/dynamic_
 import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/metadata_provider.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/dynamic_crud_provider.dart';
 import 'package:herramienta_case/modules/home/presentation/providers/recent_activity_provider.dart';
+import 'package:herramienta_case/modules/notifications/presentation/providers/notification_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -95,6 +96,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => RecentActivityProvider()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NotificationProvider()..init(),
         ),
       ],
       child: Consumer<AuthProvider>(
