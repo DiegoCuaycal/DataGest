@@ -364,7 +364,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                 icon: Icons.download,
                 color: AppColors.success,
                 onTap: () {
-                  NotificationService.showInfo(context, AppStrings.featureInDevelopment);
+                  AppRoutes.navigateTo(context, AppRoutes.exportData);
                 },
               ),
               QuickActionButton(

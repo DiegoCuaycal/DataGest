@@ -19,6 +19,9 @@ import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/met
 import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/dynamic_crud_provider.dart';
 import 'package:herramienta_case/modules/home/presentation/providers/recent_activity_provider.dart';
 import 'package:herramienta_case/modules/notifications/presentation/providers/notification_provider.dart';
+import 'package:herramienta_case/modules/export/presentation/providers/export_provider.dart';
+import 'package:herramienta_case/modules/export/data/repositories/export_repository.dart';
+import 'package:herramienta_case/modules/export/domain/services/export_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,10 +56,17 @@ void main() async {
     remoteDataSource: dynamicRemoteDataSource,
   );
 
+  final exportService = ExportService();
+  final exportRepository = ExportRepository(
+    remoteDataSource: dynamicRemoteDataSource,
+    exportService: exportService,
+  );
+
   runApp(MyApp(
     authRepository: authRepository,
     databaseRepository: databaseRepository,
     dynamicCrudRepository: dynamicCrudRepository,
+    exportRepository: exportRepository,
   ));
 }
 
@@ -64,12 +74,14 @@ class MyApp extends StatelessWidget {
   final AuthRepository authRepository;
   final DatabaseRepository databaseRepository;
   final DynamicCrudRepository dynamicCrudRepository;
+  final ExportRepository exportRepository;
 
   const MyApp({
     super.key,
     required this.authRepository,
     required this.databaseRepository,
     required this.dynamicCrudRepository,
+    required this.exportRepository,
   });
 
   @override
@@ -99,6 +111,11 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => NotificationProvider()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ExportProvider(
+            repository: exportRepository,
+          ),
         ),
       ],
       child: Consumer<AuthProvider>(
