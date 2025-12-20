@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
-import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import '../providers/metadata_provider.dart';
@@ -55,37 +54,6 @@ class _TablesMenuScreenState extends State<TablesMenuScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadMetadata,
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'logout') {
-                _handleLogout();
-              } else if (value == 'change_db') {
-                _handleChangeDatabase();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'change_db',
-                child: Row(
-                  children: [
-                    Icon(Icons.swap_horiz),
-                    SizedBox(width: 8),
-                    Text('Cambiar BD'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 8),
-                    Text('Cerrar sesión'),
-                  ],
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -254,41 +222,5 @@ class _TablesMenuScreenState extends State<TablesMenuScreen> {
                       ],
                     ),
     );
-  }
-
-  void _handleLogout() async {
-    final confirmed = await NotificationService.showConfirmDialog(
-      context,
-      title: 'Cerrar sesión',
-      message: '¿Está seguro de cerrar sesión?',
-      confirmText: 'Cerrar sesión',
-      cancelText: 'Cancelar',
-      confirmColor: AppColors.error,
-    );
-
-    if (confirmed && mounted) {
-      context.read<AuthProvider>().logout();
-      context.read<MetadataProvider>().clearMetadata();
-      NotificationService.showSuccess(context, AppStrings.successLogout);
-      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-    }
-  }
-
-  void _handleChangeDatabase() async {
-    final confirmed = await NotificationService.showConfirmDialog(
-      context,
-      title: 'Cambiar base de datos',
-      message: '¿Desea cambiar a otra base de datos? Esto cerrará su sesión actual.',
-      confirmText: 'Cambiar',
-      cancelText: 'Cancelar',
-    );
-
-    if (confirmed && mounted) {
-      context.read<AuthProvider>().logout();
-      context.read<MetadataProvider>().clearMetadata();
-      context.read<DatabaseSelectorProvider>().clearSelection();
-      NotificationService.showInfo(context, 'Selecciona una nueva base de datos');
-      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-    }
   }
 }

@@ -18,6 +18,7 @@ import 'package:herramienta_case/modules/home/presentation/widgets/quick_action_
 import 'package:herramienta_case/modules/home/presentation/widgets/featured_table_card.dart';
 import 'package:herramienta_case/modules/home/presentation/widgets/recent_activity_item.dart';
 import 'package:herramienta_case/modules/notifications/presentation/providers/notification_provider.dart';
+import 'package:herramienta_case/core/widgets/paginated_list_view.dart';
 
 /// Pantalla principal (Home) rediseñada profesionalmente
 class NewHomeScreen extends StatefulWidget {
@@ -368,19 +369,23 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                 },
               ),
               QuickActionButton(
-                label: 'Estadísticas',
-                icon: Icons.bar_chart,
-                color: AppColors.warning,
+                label: 'CRUD Simple',
+                icon: Icons.edit_note,
+                color: AppColors.info,
                 onTap: () {
-                  NotificationService.showInfo(context, AppStrings.featureInDevelopment);
+                  AppRoutes.navigateTo(context, AppRoutes.tablesMenu);
                 },
               ),
               QuickActionButton(
-                label: 'Configuración',
-                icon: Icons.settings,
-                color: AppColors.textSecondary,
+                label: 'CRUD Cabecera-Detalle',
+                icon: Icons.receipt_long,
+                color: AppColors.secondary,
                 onTap: () {
-                  NotificationService.showInfo(context, AppStrings.featureInDevelopment);
+                  // TODO: Implementar navegación a CRUD Cabecera-Detalle
+                  NotificationService.showInfo(
+                    context,
+                    'CRUD Cabecera-Detalle - Próximamente',
+                  );
                 },
               ),
             ],
@@ -505,22 +510,20 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                 ],
               ),
               const SizedBox(height: AppStyles.paddingSmall),
-              Container(
+              PaginatedListView(
+                items: activityProvider.activities,
+                itemsPerPage: 5,
+                itemBuilder: (context, activity, index) {
+                  return RecentActivityItem(activity: activity);
+                },
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                emptyMessage: 'No hay actividad reciente',
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: activityProvider.activities.take(5).length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final activity = activityProvider.activities[index];
-                    return RecentActivityItem(activity: activity);
-                  },
-                ),
+                showPageInfo: true,
               ),
             ],
           ),
