@@ -108,10 +108,7 @@ class HomeDrawer extends StatelessWidget {
                   title: AppStrings.configuration,
                   onTap: () {
                     Navigator.pop(context);
-                    NotificationService.showInfo(
-                      context,
-                      AppStrings.featureInDevelopment,
-                    );
+                    AppRoutes.navigateTo(context, AppRoutes.settings);
                   },
                 ),
                 _buildDrawerItem(
@@ -120,10 +117,7 @@ class HomeDrawer extends StatelessWidget {
                   title: AppStrings.help,
                   onTap: () {
                     Navigator.pop(context);
-                    NotificationService.showInfo(
-                      context,
-                      AppStrings.featureInDevelopment,
-                    );
+                    AppRoutes.navigateTo(context, AppRoutes.help);
                   },
                 ),
               ],
