@@ -1,9 +1,3 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +10,8 @@ import 'package:herramienta_case/modules/database_selector/data/datasources/data
 import 'package:herramienta_case/modules/database_selector/data/repositories/database_repository.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/datasources/dynamic_remote_datasource.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/repositories/dynamic_crud_repository.dart';
+import 'package:herramienta_case/modules/export/data/repositories/export_repository.dart';
+import 'package:herramienta_case/modules/export/domain/services/export_service.dart';
 import 'package:herramienta_case/main.dart';
 
 void main() {
@@ -47,11 +43,19 @@ void main() {
       remoteDataSource: dynamicRemoteDataSource,
     );
 
+    // Export repository
+    final exportService = ExportService();
+    final exportRepository = ExportRepository(
+      remoteDataSource: dynamicRemoteDataSource,
+      exportService: exportService,
+    );
+
     // Construir la app con las dependencias necesarias
     await tester.pumpWidget(MyApp(
       authRepository: authRepository,
       databaseRepository: databaseRepository,
       dynamicCrudRepository: dynamicCrudRepository,
+      exportRepository: exportRepository,
     ));
 
     // Verificar que la app se inicializa correctamente
