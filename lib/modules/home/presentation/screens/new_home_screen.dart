@@ -6,6 +6,7 @@ import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/config/routes.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
+import 'package:herramienta_case/core/utils/responsive_utils.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/metadata_provider.dart';
@@ -298,39 +299,48 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
             style: AppStyles.heading3,
           ),
           const SizedBox(height: AppStyles.paddingMedium),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: AppStyles.paddingSmall,
-            crossAxisSpacing: AppStyles.paddingSmall,
-            childAspectRatio: 3.2,
-            children: [
-              StatCard(
-                label: 'Tablas',
-                value: '${stats.totalTables}',
-                icon: Icons.table_chart,
-                color: AppColors.primary,
-              ),
-              StatCard(
-                label: 'Columnas',
-                value: '${stats.totalColumns}',
-                icon: Icons.view_column,
-                color: AppColors.secondary,
-              ),
-              StatCard(
-                label: 'Relaciones',
-                value: '${stats.totalForeignKeys}',
-                icon: Icons.link,
-                color: AppColors.success,
-              ),
-              StatCard(
-                label: 'Vistas',
-                value: '${stats.totalViews}',
-                icon: Icons.visibility,
-                color: AppColors.warning,
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Calcular el aspect ratio basado en el ancho disponible
+              final cardWidth = (constraints.maxWidth - AppStyles.paddingSmall) / 2;
+              final cardHeight = 58.0; // Altura fija para las tarjetas con margen de seguridad
+              final aspectRatio = cardWidth / cardHeight;
+
+              return GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: AppStyles.paddingSmall,
+                crossAxisSpacing: AppStyles.paddingSmall,
+                childAspectRatio: aspectRatio.clamp(2.3, 4.0),
+                children: [
+                  StatCard(
+                    label: 'Tablas',
+                    value: '${stats.totalTables}',
+                    icon: Icons.table_chart,
+                    color: AppColors.primary,
+                  ),
+                  StatCard(
+                    label: 'Columnas',
+                    value: '${stats.totalColumns}',
+                    icon: Icons.view_column,
+                    color: AppColors.secondary,
+                  ),
+                  StatCard(
+                    label: 'Relaciones',
+                    value: '${stats.totalForeignKeys}',
+                    icon: Icons.link,
+                    color: AppColors.success,
+                  ),
+                  StatCard(
+                    label: 'Vistas',
+                    value: '${stats.totalViews}',
+                    icon: Icons.visibility,
+                    color: AppColors.warning,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -598,13 +608,12 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
   }
 
   int _getCrossAxisCount(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width < 600) {
-      return 2; // Móvil
-    } else if (width < 1024) {
-      return 3; // Tablet
-    } else {
-      return 4; // Desktop
-    }
+    return ResponsiveUtils.getGridCrossAxisCount(
+      context,
+      smallMobile: 1, // Pantallas muy pequeñas
+      mobile: 2,      // Móviles normales
+      tablet: 3,      // Tablets
+      desktop: 4,     // Desktop
+    );
   }
 }

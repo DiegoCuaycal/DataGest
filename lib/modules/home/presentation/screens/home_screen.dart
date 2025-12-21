@@ -6,6 +6,7 @@ import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/config/routes.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
+import 'package:herramienta_case/core/utils/responsive_utils.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 import 'package:herramienta_case/modules/home/presentation/widgets/home_drawer.dart';
 import 'package:herramienta_case/modules/home/presentation/widgets/home_card.dart';
@@ -149,13 +150,12 @@ class HomeScreen extends StatelessWidget {
   }
 
   int _getCrossAxisCount(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width < 600) {
-      return 2; // Móvil
-    } else if (width < 1024) {
-      return 3; // Tablet
-    } else {
-      return 4; // Desktop
-    }
+    return ResponsiveUtils.getGridCrossAxisCount(
+      context,
+      smallMobile: 1, // Pantallas muy pequeñas
+      mobile: 2,      // Móviles normales
+      tablet: 3,      // Tablets
+      desktop: 4,     // Desktop
+    );
   }
 }

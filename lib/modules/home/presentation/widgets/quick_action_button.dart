@@ -45,11 +45,15 @@ class QuickActionButton extends StatelessWidget {
                 color: color,
               ),
               const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppStyles.bodySmall.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  label,
+                  style: AppStyles.bodySmall.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
