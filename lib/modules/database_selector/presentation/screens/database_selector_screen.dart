@@ -196,6 +196,16 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
           );
         },
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushNamed(context, '/create-database');
+        },
+        backgroundColor: AppColors.success,
+        foregroundColor: AppColors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Crear BD'),
+        tooltip: 'Crear nueva base de datos',
+      ),
     );
   }
 }

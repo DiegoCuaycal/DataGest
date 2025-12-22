@@ -7,6 +7,7 @@ import 'package:herramienta_case/core/utils/helpers.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/core/config/routes.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
+import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
 import 'package:herramienta_case/shared/widgets/custom_button.dart';
 import 'package:herramienta_case/shared/widgets/custom_text_field.dart';
 
@@ -20,15 +21,59 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Obtiene las credenciales correspondientes según la base de datos seleccionada
+  Map<String, String> _getCredentialsForDatabase(String? databaseName) {
+    if (databaseName == null) {
+      return {
+        'dbName': 'Prueba',
+        'username': 'profe_juan',
+        'password': 'hash123',
+        'note': 'Selecciona una base de datos para ver sus credenciales',
+      };
+    }
+
+    // Normalizar el nombre de la BD para comparación
+    final dbNameLower = databaseName.toLowerCase();
+
+    // Credenciales específicas por base de datos
+    if (dbNameLower.contains('estudiante')) {
+      return {
+        'dbName': 'Estudiantes',
+        'username': 'profe_juan',
+        'password': 'hash123',
+      };
+    } else if (dbNameLower.contains('medico') || dbNameLower.contains('médico')) {
+      return {
+        'dbName': 'Médicos',
+        'username': 'dr_house',
+        'password': 'hash789',
+      };
+    } else if (dbNameLower.contains('producto')) {
+      return {
+        'dbName': 'Productos',
+        'username': 'admin_stock',
+        'password': 'hash123',
+      };
+    } else {
+      // BD personalizada o no reconocida
+      return {
+        'dbName': databaseName,
+        'username': 'admin',
+        'password': '******',
+        'note': 'Usa las credenciales que configuraste al crear esta BD',
+      };
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -41,11 +86,16 @@ class _LoginFormState extends State<LoginForm> {
     }
 
     final authProvider = context.read<AuthProvider>();
+    final databaseProvider = context.read<DatabaseSelectorProvider>();
 
-    // Realizar login
+    // Obtener el nombre de la base de datos seleccionada
+    final databaseName = databaseProvider.currentDatabaseName;
+
+    // Realizar login con la base de datos seleccionada (si existe)
     final success = await authProvider.login(
-      email: _emailController.text.trim(),
+      username: _usernameController.text.trim(),
       password: _passwordController.text,
+      databaseName: databaseName,
     );
 
     if (!mounted) return;
@@ -70,13 +120,13 @@ class _LoginFormState extends State<LoginForm> {
         children: [
           // Usuario field
           CustomTextField(
-            controller: _emailController,
-            label: 'Correo Electrónico',
+            controller: _usernameController,
+            label: 'Usuario',
             hint: 'admin',
             prefixIcon: Icons.person,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Ingresa un correo electrónico válido';
+                return 'Ingresa un usuario válido';
               }
               return null;
             },
@@ -165,38 +215,82 @@ class _LoginFormState extends State<LoginForm> {
           const SizedBox(height: AppStyles.paddingMedium),
 
           // Información de credenciales de prueba
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.info.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppColors.info.withValues(alpha: 0.2),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Para probar el backend:',
-                  style: AppStyles.bodySmall.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+          Consumer<DatabaseSelectorProvider>(
+            builder: (context, dbProvider, child) {
+              // Obtener credenciales según la BD seleccionada
+              final credentials = _getCredentialsForDatabase(
+                dbProvider.currentDatabaseName,
+              );
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.info.withValues(alpha: 0.2),
+                    width: 1,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'Email: admin@test.com',
-                  style: AppStyles.bodySmall,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Credenciales de ${credentials['dbName'] ?? 'Prueba'}:',
+                            style: AppStyles.bodySmall.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (dbProvider.currentDatabaseName != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              credentials['dbName'] ?? 'N/A',
+                              style: AppStyles.caption.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Usuario: ${credentials['username'] ?? 'N/A'}',
+                      style: AppStyles.bodySmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Contraseña: ${credentials['password'] ?? 'N/A'}',
+                      style: AppStyles.bodySmall,
+                    ),
+                    if (credentials.containsKey('note') && credentials['note'] != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          credentials['note']!,
+                          style: AppStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Contraseña: 123456',
-                  style: AppStyles.bodySmall,
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),

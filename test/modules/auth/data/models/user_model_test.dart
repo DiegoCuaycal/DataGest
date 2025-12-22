@@ -8,15 +8,21 @@ void main() {
       // Arrange & Act
       final user = UserModel(
         id: 1,
+        username: 'testuser',
         email: 'test@example.com',
         nombre: 'Test User',
+        role: 'Usuario',
+        roleId: 1,
         token: 'test_token_123',
       );
 
       // Assert
       expect(user.id, 1);
+      expect(user.username, 'testuser');
       expect(user.email, 'test@example.com');
       expect(user.nombre, 'Test User');
+      expect(user.role, 'Usuario');
+      expect(user.roleId, 1);
       expect(user.token, 'test_token_123');
     });
 

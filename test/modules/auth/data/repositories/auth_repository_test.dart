@@ -26,11 +26,11 @@ void main() {
   });
 
   group('AuthRepository - login', () {
-    const testEmail = 'test@example.com';
+    const testUsername = 'test@example.com';
     const testPassword = 'password123';
     final testUserModel = UserModel(
       id: 1,
-      email: testEmail,
+      email: testUsername,
       nombre: 'Test User',
       token: 'test_token_123',
     );
@@ -38,8 +38,9 @@ void main() {
     test('should return UserEntity when login is successful', () async {
       // Arrange
       when(mockRemoteDataSource.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenAnswer((_) async => testUserModel);
 
       when(mockSharedPreferences.setString(any, any))
@@ -47,7 +48,7 @@ void main() {
 
       // Act
       final result = await repository.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
@@ -58,16 +59,18 @@ void main() {
       expect(result.token, testUserModel.token);
 
       verify(mockRemoteDataSource.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
+        databaseName: null,
       )).called(1);
     });
 
     test('should cache user data locally after successful login', () async {
       // Arrange
       when(mockRemoteDataSource.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenAnswer((_) async => testUserModel);
 
       when(mockSharedPreferences.setString(any, any))
@@ -75,7 +78,7 @@ void main() {
 
       // Act
       await repository.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
@@ -94,13 +97,14 @@ void main() {
     test('should throw NetworkException when remote datasource throws it', () async {
       // Arrange
       when(mockRemoteDataSource.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(NetworkException('No internet connection'));
 
       // Act & Assert
       expect(
-        () => repository.login(email: testEmail, password: testPassword),
+        () => repository.login(username: testUsername, password: testPassword),
         throwsA(isA<NetworkException>()),
       );
     });
@@ -108,13 +112,14 @@ void main() {
     test('should throw ServerException when remote datasource throws it', () async {
       // Arrange
       when(mockRemoteDataSource.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(ServerException('Server error'));
 
       // Act & Assert
       expect(
-        () => repository.login(email: testEmail, password: testPassword),
+        () => repository.login(username: testUsername, password: testPassword),
         throwsA(isA<ServerException>()),
       );
     });
@@ -122,13 +127,14 @@ void main() {
     test('should throw ServerException on unexpected error', () async {
       // Arrange
       when(mockRemoteDataSource.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(Exception('Unexpected error'));
 
       // Act & Assert
       expect(
-        () => repository.login(email: testEmail, password: testPassword),
+        () => repository.login(username: testUsername, password: testPassword),
         throwsA(isA<ServerException>()),
       );
     });

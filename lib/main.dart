@@ -13,6 +13,9 @@ import 'package:herramienta_case/modules/auth/presentation/providers/auth_provid
 import 'package:herramienta_case/modules/database_selector/data/datasources/database_remote_datasource.dart';
 import 'package:herramienta_case/modules/database_selector/data/repositories/database_repository.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
+import 'package:herramienta_case/modules/database_creator/data/datasources/database_creator_remote_datasource.dart';
+import 'package:herramienta_case/modules/database_creator/data/repositories/database_creator_repository.dart';
+import 'package:herramienta_case/modules/database_creator/presentation/providers/database_creator_provider.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/datasources/dynamic_remote_datasource.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/repositories/dynamic_crud_repository.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/providers/metadata_provider.dart';
@@ -51,6 +54,11 @@ void main() async {
     remoteDataSource: databaseRemoteDataSource,
   );
 
+  final databaseCreatorRemoteDataSource = DatabaseCreatorRemoteDataSource(client: httpClient);
+  final databaseCreatorRepository = DatabaseCreatorRepository(
+    remoteDataSource: databaseCreatorRemoteDataSource,
+  );
+
   final dynamicRemoteDataSource = DynamicRemoteDataSource(client: httpClient);
   final dynamicCrudRepository = DynamicCrudRepository(
     remoteDataSource: dynamicRemoteDataSource,
@@ -65,6 +73,7 @@ void main() async {
   runApp(MyApp(
     authRepository: authRepository,
     databaseRepository: databaseRepository,
+    databaseCreatorRepository: databaseCreatorRepository,
     dynamicCrudRepository: dynamicCrudRepository,
     exportRepository: exportRepository,
   ));
@@ -73,6 +82,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   final AuthRepository authRepository;
   final DatabaseRepository databaseRepository;
+  final DatabaseCreatorRepository databaseCreatorRepository;
   final DynamicCrudRepository dynamicCrudRepository;
   final ExportRepository exportRepository;
 
@@ -80,6 +90,7 @@ class MyApp extends StatelessWidget {
     super.key,
     required this.authRepository,
     required this.databaseRepository,
+    required this.databaseCreatorRepository,
     required this.dynamicCrudRepository,
     required this.exportRepository,
   });
@@ -91,6 +102,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => DatabaseSelectorProvider(
             repository: databaseRepository,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => DatabaseCreatorProvider(
+            repository: databaseCreatorRepository,
           ),
         ),
         ChangeNotifierProvider(

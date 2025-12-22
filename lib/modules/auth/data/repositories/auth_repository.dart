@@ -18,14 +18,16 @@ class AuthRepository {
 
   /// Realiza login
   Future<UserEntity> login({
-    required String email,
+    required String username,
     required String password,
+    String? databaseName,
   }) async {
     try {
       // Usar API real para login
       final userModel = await remoteDataSource.login(
-        email: email,
+        username: username,
         password: password,
+        databaseName: databaseName,
       );
 
       // Guardar usuario en caché local

@@ -4,6 +4,7 @@ import 'package:herramienta_case/modules/home/presentation/screens/new_home_scre
 import 'package:herramienta_case/modules/case_tools/presentation/screens/tools_list_screen.dart';
 import 'package:herramienta_case/modules/case_tools/presentation/screens/tool_detail_screen.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/screens/database_selector_screen.dart';
+import 'package:herramienta_case/modules/database_creator/presentation/screens/database_creator_screen.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/tables_menu_screen.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/dynamic_list_screen.dart';
 import 'package:herramienta_case/modules/dynamic_crud/presentation/screens/dynamic_form_screen.dart';
@@ -14,6 +15,7 @@ import 'package:herramienta_case/modules/help/presentation/screens/help_screen.d
 
 class AppRoutes {
   static const String selectDatabase = '/';
+  static const String createDatabase = '/create-database';
   static const String login = '/login';
   static const String home = '/home';
   static const String tablesMenu = '/tables';
@@ -28,6 +30,7 @@ class AppRoutes {
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       selectDatabase: (context) => const DatabaseSelectorScreen(),
+      createDatabase: (context) => const DatabaseCreatorScreen(),
       login: (context) => const LoginScreen(),
       home: (context) => const NewHomeScreen(),
       tablesMenu: (context) => const TablesMenuScreen(),

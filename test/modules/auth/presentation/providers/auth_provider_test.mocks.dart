@@ -78,17 +78,23 @@ class MockAuthRepository extends _i1.Mock implements _i5.AuthRepository {
 
   @override
   _i6.Future<_i4.UserEntity> login({
-    required String? email,
+    required String? username,
     required String? password,
+    String? databaseName,
   }) =>
       (super.noSuchMethod(
-            Invocation.method(#login, [], {#email: email, #password: password}),
+            Invocation.method(#login, [], {
+              #username: username,
+              #password: password,
+              #databaseName: databaseName,
+            }),
             returnValue: _i6.Future<_i4.UserEntity>.value(
               _FakeUserEntity_2(
                 this,
                 Invocation.method(#login, [], {
-                  #email: email,
+                  #username: username,
                   #password: password,
+                  #databaseName: databaseName,
                 }),
               ),
             ),

@@ -57,17 +57,23 @@ class MockAuthRemoteDataSource extends _i1.Mock
 
   @override
   _i5.Future<_i3.UserModel> login({
-    required String? email,
+    required String? username,
     required String? password,
+    String? databaseName,
   }) =>
       (super.noSuchMethod(
-            Invocation.method(#login, [], {#email: email, #password: password}),
+            Invocation.method(#login, [], {
+              #username: username,
+              #password: password,
+              #databaseName: databaseName,
+            }),
             returnValue: _i5.Future<_i3.UserModel>.value(
               _FakeUserModel_1(
                 this,
                 Invocation.method(#login, [], {
-                  #email: email,
+                  #username: username,
                   #password: password,
+                  #databaseName: databaseName,
                 }),
               ),
             ),
@@ -95,19 +101,19 @@ class MockAuthRemoteDataSource extends _i1.Mock
 
   @override
   _i5.Future<_i3.UserModel> mockLogin({
-    required String? email,
+    required String? username,
     required String? password,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#mockLogin, [], {
-              #email: email,
+              #username: username,
               #password: password,
             }),
             returnValue: _i5.Future<_i3.UserModel>.value(
               _FakeUserModel_1(
                 this,
                 Invocation.method(#mockLogin, [], {
-                  #email: email,
+                  #username: username,
                   #password: password,
                 }),
               ),

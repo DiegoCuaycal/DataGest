@@ -10,47 +10,61 @@ class AuthRemoteDataSource {
   AuthRemoteDataSource({required this.apiClient});
 
   Future<UserModel> login({
-    required String email,
+    required String username,
     required String password,
+    String? databaseName,
   }) async {
     try {
-      print('🔐 Intentando login con usuario: $email');
-      print('📍 URL: ${ApiEndpoints.buildUrl(ApiEndpoints.login)}');
+      // La API de Azure usa el endpoint /api/Auth/login para todas las bases de datos
+      // y requiere el nombre de la BD en el header X-DbName
+      final endpoint = ApiEndpoints.login;
+
+      print('🔐 Intentando login con usuario: $username');
+      print('🗄️  Base de datos: ${databaseName ?? "No especificada"}');
+      print('📍 URL: ${ApiEndpoints.buildUrl(endpoint)}');
+
+      // Preparar headers personalizados
+      final headers = {
+        'X-Usuario': username,
+        'X-Password': password,
+      };
+
+      // Agregar el header X-DbName solo si se especifica una base de datos
+      if (databaseName != null && databaseName.isNotEmpty) {
+        headers['X-DbName'] = databaseName;
+      }
 
       final response = await apiClient.post(
-        ApiEndpoints.login,
+        endpoint,
         includeAuth: false,
-        customHeaders: {
-          'X-Usuario': email,
-          'X-Password': password,
-        },
+        customHeaders: headers,
       );
 
       print('✅ Respuesta recibida: $response');
 
-      // Intentar parsear como ApiResponse primero
-      try {
-        final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
-          response,
-          (data) => data as Map<String, dynamic>,
+      // La API de Azure devuelve solo el token en el formato: {"token": "jwt_token"}
+      // No devuelve información del usuario, solo el token
+      if (response.containsKey('token')) {
+        final token = response['token'] as String;
+
+        // Crear un UserModel con la información disponible
+        // Como la API solo devuelve el token, usamos los datos que tenemos
+        final userModel = UserModel(
+          id: 1, // Se podría decodificar del JWT si es necesario
+          username: username,
+          email: '', // No disponible en la respuesta
+          nombre: username, // Usar username como nombre temporal
+          role: 'Usuario', // Rol por defecto
+          roleId: 1,
+          token: token,
         );
 
-        if (!apiResponse.success || apiResponse.data == null) {
-          throw Exception(apiResponse.message);
-        }
-
-        final userModel = UserModel.fromJson(apiResponse.data!);
-        await apiClient.setAuthToken(userModel.token);
-        return userModel;
-      } catch (e) {
-        print('⚠️ Error al parsear como ApiResponse: $e');
-        print('📄 Intentando parsear respuesta directa...');
-
-        // Si falla, intentar parsear directamente (algunos backends no usan ApiResponse)
-        final userModel = UserModel.fromJson(response);
-        await apiClient.setAuthToken(userModel.token);
+        await apiClient.setAuthToken(token);
+        print('✅ Login exitoso. Token guardado.');
         return userModel;
       }
+
+      throw Exception('Respuesta inválida del servidor');
     } catch (e) {
       print('❌ Error en login: $e');
       rethrow;
@@ -93,18 +107,21 @@ class AuthRemoteDataSource {
 
   /// Mock de login para testing sin backend
   Future<UserModel> mockLogin({
-    required String email,
+    required String username,
     required String password,
   }) async {
     // Simular delay de red
     await Future.delayed(const Duration(seconds: 1));
 
     // Credenciales de prueba
-    if (email == 'admin@test.com' && password == '123456') {
+    if (username == 'admin' && password == '123456') {
       final mockUser = UserModel(
         id: 1,
-        email: email,
+        username: username,
+        email: 'admin@test.com',
         nombre: 'Usuario Administrador',
+        role: 'Administrador',
+        roleId: 1,
         token: 'mock_jwt_token_${DateTime.now().millisecondsSinceEpoch}',
       );
 

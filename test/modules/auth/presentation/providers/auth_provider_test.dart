@@ -70,11 +70,11 @@ void main() {
   });
 
   group('AuthProvider - login', () {
-    const testEmail = 'test@example.com';
+    const testUsername = 'test@example.com';
     const testPassword = 'password123';
     final testUser = UserEntity(
       id: 1,
-      email: testEmail,
+      email: testUsername,
       nombre: 'Test User',
       token: 'test_token_123',
     );
@@ -82,13 +82,14 @@ void main() {
     test('should return true and update state on successful login', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenAnswer((_) async => testUser);
 
       // Act
       final result = await authProvider.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
@@ -96,7 +97,7 @@ void main() {
       expect(result, true);
       expect(authProvider.isAuthenticated, true);
       expect(authProvider.currentUser, isNotNull);
-      expect(authProvider.currentUser?.email, testEmail);
+      expect(authProvider.currentUser?.email, testUsername);
       expect(authProvider.currentUser?.nombre, 'Test User');
       expect(authProvider.isLoading, false);
       expect(authProvider.errorMessage, null);
@@ -105,13 +106,14 @@ void main() {
     test('should return false and set error on failed login', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(Exception('Credenciales incorrectas'));
 
       // Act
       final result = await authProvider.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
@@ -126,13 +128,14 @@ void main() {
     test('should handle network exception with appropriate error message', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(NetworkException('No network connection'));
 
       // Act
       final result = await authProvider.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
@@ -144,49 +147,52 @@ void main() {
     test('should handle invalid credentials error message', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(Exception('Credenciales incorrectas'));
 
       // Act
       final result = await authProvider.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
       // Assert
       expect(result, false);
-      expect(authProvider.errorMessage, 'Credenciales incorrectas');
+      expect(authProvider.errorMessage, 'Credenciales incorrectas. Verifica tu usuario y contraseña');
     });
 
     test('should handle timeout error message', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(Exception('Request timeout'));
 
       // Act
       final result = await authProvider.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
       // Assert
       expect(result, false);
-      expect(authProvider.errorMessage, 'Tiempo de espera agotado');
+      expect(authProvider.errorMessage, 'Tiempo de espera agotado. Intenta de nuevo');
     });
 
     test('should handle server error message', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(ServerException('Server error 500'));
 
       // Act
       final result = await authProvider.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
@@ -198,8 +204,9 @@ void main() {
     test('should clear error before attempting login', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenAnswer((_) async => testUser);
 
       // Set initial error
@@ -207,7 +214,7 @@ void main() {
 
       // Act
       await authProvider.login(
-        email: testEmail,
+        username: testUsername,
         password: testPassword,
       );
 
@@ -227,15 +234,16 @@ void main() {
       );
 
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenAnswer((_) async => testUser);
 
       when(mockAuthRepository.logout()).thenAnswer((_) async => {});
 
       // First login
       await authProvider.login(
-        email: 'test@example.com',
+        username: 'test@example.com',
         password: 'password',
       );
 
@@ -261,8 +269,9 @@ void main() {
       );
 
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenAnswer((_) async => testUser);
 
       when(mockAuthRepository.logout())
@@ -270,7 +279,7 @@ void main() {
 
       // First login
       await authProvider.login(
-        email: 'test@example.com',
+        username: 'test@example.com',
         password: 'password',
       );
 
@@ -294,13 +303,14 @@ void main() {
       );
 
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenAnswer((_) async => testUser);
 
       // Act
       await authProvider.login(
-        email: 'test@example.com',
+        username: 'test@example.com',
         password: 'password',
       );
 
@@ -320,30 +330,32 @@ void main() {
     test('should return friendly error for incorrect credentials', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(Exception('invalid credentials'));
 
       // Act
       await authProvider.login(
-        email: 'test@example.com',
+        username: 'test@example.com',
         password: 'wrong_password',
       );
 
       // Assert
-      expect(authProvider.errorMessage, 'Credenciales incorrectas');
+      expect(authProvider.errorMessage, 'Credenciales incorrectas. Verifica tu usuario y contraseña');
     });
 
     test('should return friendly error for network issues', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(Exception('network error'));
 
       // Act
       await authProvider.login(
-        email: 'test@example.com',
+        username: 'test@example.com',
         password: 'password',
       );
 
@@ -354,13 +366,14 @@ void main() {
     test('should return generic error for unknown issues', () async {
       // Arrange
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenThrow(Exception('Unknown error'));
 
       // Act
       await authProvider.login(
-        email: 'test@example.com',
+        username: 'test@example.com',
         password: 'password',
       );
 
@@ -380,12 +393,13 @@ void main() {
       );
 
       when(mockAuthRepository.login(
-        email: anyNamed('email'),
+        username: anyNamed('username'),
         password: anyNamed('password'),
+        databaseName: anyNamed('databaseName'),
       )).thenAnswer((_) async => testUser);
 
       await authProvider.login(
-        email: 'test@example.com',
+        username: 'test@example.com',
         password: 'password',
       );
 

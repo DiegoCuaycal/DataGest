@@ -8,6 +8,7 @@ class AuthProvider extends AppProvider {
 
   UserEntity? _currentUser;
   bool _isAuthenticated = false;
+  String? _currentDatabase;
 
   AuthProvider({required this.authRepository});
 
@@ -16,6 +17,9 @@ class AuthProvider extends AppProvider {
 
   /// Indica si el usuario está autenticado
   bool get isAuthenticated => _isAuthenticated;
+
+  /// Base de datos actual
+  String? get currentDatabase => _currentDatabase;
 
   /// Inicializa el provider verificando si hay una sesión activa
   Future<void> init() async {
@@ -34,20 +38,23 @@ class AuthProvider extends AppProvider {
 
   /// Realiza login
   Future<bool> login({
-    required String email,
+    required String username,
     required String password,
+    String? databaseName,
   }) async {
     try {
       setLoading(true);
       clearError();
 
       final user = await authRepository.login(
-        email: email,
+        username: username,
         password: password,
+        databaseName: databaseName,
       );
 
       _currentUser = user;
       _isAuthenticated = true;
+      _currentDatabase = databaseName;
 
       setLoading(false);
       return true;
@@ -55,6 +62,7 @@ class AuthProvider extends AppProvider {
       setError(_getErrorMessage(e));
       _isAuthenticated = false;
       _currentUser = null;
+      _currentDatabase = null;
       return false;
     }
   }
@@ -69,6 +77,7 @@ class AuthProvider extends AppProvider {
     } finally {
       _currentUser = null;
       _isAuthenticated = false;
+      _currentDatabase = null;
       clearState();
     }
   }
@@ -79,20 +88,33 @@ class AuthProvider extends AppProvider {
 
     if (errorStr.contains('credenciales incorrectas') ||
         errorStr.contains('incorrect') ||
-        errorStr.contains('invalid')) {
-      return 'Credenciales incorrectas';
+        errorStr.contains('invalid') ||
+        errorStr.contains('unauthorized') ||
+        errorStr.contains('401')) {
+      return 'Credenciales incorrectas. Verifica tu usuario y contraseña';
+    } else if (errorStr.contains('not found') ||
+        errorStr.contains('no existe') ||
+        errorStr.contains('404')) {
+      return 'Usuario no encontrado en esta base de datos';
+    } else if (errorStr.contains('user not found') ||
+        errorStr.contains('usuario no encontrado')) {
+      return 'Usuario no registrado. Verifica las credenciales o crea un nuevo usuario';
     } else if (errorStr.contains('network') ||
         errorStr.contains('conexión') ||
-        errorStr.contains('internet')) {
+        errorStr.contains('internet') ||
+        errorStr.contains('socketexception')) {
       return 'Error de conexión. Verifica tu internet';
     } else if (errorStr.contains('timeout') ||
         errorStr.contains('time out')) {
-      return 'Tiempo de espera agotado';
+      return 'Tiempo de espera agotado. Intenta de nuevo';
     } else if (errorStr.contains('server') ||
         errorStr.contains('500') ||
         errorStr.contains('502') ||
         errorStr.contains('503')) {
       return 'Error del servidor. Intenta más tarde';
+    } else if (errorStr.contains('database') ||
+        errorStr.contains('base de datos')) {
+      return 'Error en la base de datos. Verifica que esté seleccionada correctamente';
     }
 
     return 'Error al iniciar sesión. Intenta de nuevo';

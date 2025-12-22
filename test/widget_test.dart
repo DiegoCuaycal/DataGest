@@ -8,6 +8,8 @@ import 'package:herramienta_case/modules/auth/data/datasources/auth_remote_datas
 import 'package:herramienta_case/modules/auth/data/repositories/auth_repository.dart';
 import 'package:herramienta_case/modules/database_selector/data/datasources/database_remote_datasource.dart';
 import 'package:herramienta_case/modules/database_selector/data/repositories/database_repository.dart';
+import 'package:herramienta_case/modules/database_creator/data/datasources/database_creator_remote_datasource.dart';
+import 'package:herramienta_case/modules/database_creator/data/repositories/database_creator_repository.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/datasources/dynamic_remote_datasource.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/repositories/dynamic_crud_repository.dart';
 import 'package:herramienta_case/modules/export/data/repositories/export_repository.dart';
@@ -37,6 +39,12 @@ void main() {
       remoteDataSource: databaseRemoteDataSource,
     );
 
+    // Database creator repository
+    final databaseCreatorRemoteDataSource = DatabaseCreatorRemoteDataSource(client: httpClient);
+    final databaseCreatorRepository = DatabaseCreatorRepository(
+      remoteDataSource: databaseCreatorRemoteDataSource,
+    );
+
     // Dynamic CRUD repository
     final dynamicRemoteDataSource = DynamicRemoteDataSource(client: httpClient);
     final dynamicCrudRepository = DynamicCrudRepository(
@@ -54,6 +62,7 @@ void main() {
     await tester.pumpWidget(MyApp(
       authRepository: authRepository,
       databaseRepository: databaseRepository,
+      databaseCreatorRepository: databaseCreatorRepository,
       dynamicCrudRepository: dynamicCrudRepository,
       exportRepository: exportRepository,
     ));
