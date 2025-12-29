@@ -1,4 +1,4 @@
-# Herramientas CASE - Frontend Flutter
+# DataGest - Frontend Flutter
 
 Sistema de gestión de Herramientas CASE con autenticación, desarrollado en Flutter siguiendo Clean Architecture.
 
@@ -37,7 +37,7 @@ lib/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/DiegoCuaycal/herramientas-case-app.git
+git clone https://github.com/DiegoCuaycal/DataGest.git
 cd herramienta_case
 ```
 
