@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:herramienta_case/modules/splash/presentation/screens/splash_screen.dart';
 import 'package:herramienta_case/modules/auth/presentation/screens/login_screen.dart';
 import 'package:herramienta_case/modules/home/presentation/screens/new_home_screen.dart';
 import 'package:herramienta_case/modules/case_tools/presentation/screens/tools_list_screen.dart';
@@ -14,7 +15,8 @@ import 'package:herramienta_case/modules/settings/presentation/screens/settings_
 import 'package:herramienta_case/modules/help/presentation/screens/help_screen.dart';
 
 class AppRoutes {
-  static const String selectDatabase = '/';
+  static const String splash = '/';
+  static const String selectDatabase = '/select-database';
   static const String createDatabase = '/create-database';
   static const String login = '/login';
   static const String home = '/home';
@@ -29,6 +31,7 @@ class AppRoutes {
   /// Mapa de rutas de la aplicación
   static Map<String, WidgetBuilder> getRoutes() {
     return {
+      splash: (context) => const SplashScreen(),
       selectDatabase: (context) => const DatabaseSelectorScreen(),
       createDatabase: (context) => const DatabaseCreatorScreen(),
       login: (context) => const LoginScreen(),

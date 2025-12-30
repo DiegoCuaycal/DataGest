@@ -1,7 +1,7 @@
 /// Configuración general de la aplicación
 class AppConfig {
   /// Nombre de la aplicación
-  static const String appName = 'Herramientas CASE';
+  static const String appName = 'Data Gest';
 
   /// Versión de la aplicación
   static const String appVersion = '1.0.0';

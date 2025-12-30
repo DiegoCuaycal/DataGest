@@ -141,8 +141,8 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: _buildTheme(),
 
-            // Ruta inicial: DatabaseSelector (sin autenticación)
-            initialRoute: AppRoutes.selectDatabase,
+            // Ruta inicial: Splash screen
+            initialRoute: AppRoutes.splash,
 
             // Rutas de la aplicación
             routes: AppRoutes.getRoutes(),
