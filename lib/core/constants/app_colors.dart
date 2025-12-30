@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 
 /// Paleta de colores de la aplicación
+/// Azure Blue como color primario oficial - transmite modernidad, tecnología y profesionalismo
 class AppColors {
-  // Colores primarios
-  static const Color primary = Color(0xFF2196F3);
-  static const Color primaryDark = Color(0xFF1976D2);
-  static const Color primaryLight = Color(0xFF64B5F6);
+  // Colores primarios - Azure Blue
+  static const Color primary = Color(0xFF007FFF); // Azure Blue principal
+  static const Color primaryDark = Color(0xFF0066CC); // Azure Blue oscuro
+  static const Color primaryLight = Color(0xFF3399FF); // Azure Blue claro
 
-  // Colores secundarios
-  static const Color secondary = Color(0xFF00BCD4);
-  static const Color secondaryDark = Color(0xFF0097A7);
-  static const Color secondaryLight = Color(0xFF4DD0E1);
+  // Colores secundarios - Tonos complementarios
+  static const Color secondary = Color(0xFF00A3E0); // Cyan tecnológico
+  static const Color secondaryDark = Color(0xFF0082B8); // Cyan oscuro
+  static const Color secondaryLight = Color(0xFF33B5E5); // Cyan claro
 
   // Colores de estado
   static const Color success = Color(0xFF4CAF50);
   static const Color error = Color(0xFFF44336);
   static const Color warning = Color(0xFFFF9800);
-  static const Color info = Color(0xFF2196F3);
+  static const Color info = Color(0xFF007FFF); // Azure Blue para información
 
   // Colores de fondo
   static const Color background = Color(0xFFF5F5F5);
@@ -53,10 +54,10 @@ class AppColors {
   static const List<Color> successGradient = [Color(0xFF66BB6A), Color(0xFF81C784)];
   static const List<Color> errorGradient = [error, Color(0xFFE57373)];
   static const List<Color> warningGradient = [warning, Color(0xFFFFB74D)];
-  static const List<Color> infoGradient = [info, Color(0xFF64B5F6)];
+  static const List<Color> infoGradient = [info, Color(0xFF3399FF)];
 
-  // Gradiente oscuro para fondos
-  static const List<Color> darkGradient = [Color(0xFF1976D2), Color(0xFF1565C0)];
+  // Gradiente oscuro para fondos - Azure Blue
+  static const List<Color> darkGradient = [Color(0xFF0066CC), Color(0xFF0052A3)];
 
   // Gradiente de cards
   static const List<Color> cardGradient = [Color(0xFFFFFFFF), Color(0xFFF8F9FA)];

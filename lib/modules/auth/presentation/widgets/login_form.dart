@@ -6,6 +6,7 @@ import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/utils/helpers.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/core/config/routes.dart';
+import 'package:herramienta_case/core/services/loading_overlay_service.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
 import 'package:herramienta_case/shared/widgets/custom_button.dart';
@@ -91,23 +92,37 @@ class _LoginFormState extends State<LoginForm> {
     // Obtener el nombre de la base de datos seleccionada
     final databaseName = databaseProvider.currentDatabaseName;
 
-    // Realizar login con la base de datos seleccionada (si existe)
-    final success = await authProvider.login(
-      username: _usernameController.text.trim(),
-      password: _passwordController.text,
-      databaseName: databaseName,
-    );
+    // Mostrar loading overlay profesional
+    LoadingOverlayService.show(context, text: 'Iniciando sesión...');
 
-    if (!mounted) return;
+    try {
+      // Realizar login con la base de datos seleccionada (si existe)
+      final success = await authProvider.login(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+        databaseName: databaseName,
+      );
 
-    if (success) {
-      // Login exitoso - navegar al Home Dashboard
-      NotificationService.showSuccess(context, AppStrings.successLogin);
-      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
-    } else {
-      // Login fallido - mostrar error
-      final errorMessage = authProvider.errorMessage ?? AppStrings.errorGeneric;
-      NotificationService.showError(context, errorMessage);
+      if (!mounted) return;
+
+      // Ocultar loading
+      LoadingOverlayService.hide();
+
+      if (success) {
+        // Login exitoso - navegar al Home Dashboard
+        NotificationService.showSuccess(context, AppStrings.successLogin);
+        AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
+      } else {
+        // Login fallido - mostrar error
+        final errorMessage = authProvider.errorMessage ?? AppStrings.errorGeneric;
+        NotificationService.showError(context, errorMessage);
+      }
+    } catch (e) {
+      // Ocultar loading en caso de error
+      LoadingOverlayService.hide();
+      if (mounted) {
+        NotificationService.showError(context, 'Error al iniciar sesión');
+      }
     }
   }
 

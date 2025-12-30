@@ -4,6 +4,7 @@ import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/constants/app_icons.dart';
 import 'package:herramienta_case/core/constants/app_strings.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
+import 'package:herramienta_case/core/services/loading_overlay_service.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import '../providers/dynamic_crud_provider.dart';
 import '../providers/metadata_provider.dart';
@@ -274,14 +275,22 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
       final dbProvider = context.read<DatabaseSelectorProvider>();
       final crudProvider = context.read<DynamicCrudProvider>();
 
-      final success = await crudProvider.deleteRecord(
-        databaseName: dbProvider.currentDatabaseName!,
-        tableName: widget.tableName,
-        id: record[pkColumn],
-        token: 'mock_token',
-      );
+      // Mostrar loading overlay durante la eliminación
+      LoadingOverlayService.show(context, text: 'Eliminando registro...');
 
-      if (mounted) {
+      try {
+        final success = await crudProvider.deleteRecord(
+          databaseName: dbProvider.currentDatabaseName!,
+          tableName: widget.tableName,
+          id: record[pkColumn],
+          token: 'mock_token',
+        );
+
+        if (!mounted) return;
+
+        // Ocultar loading
+        LoadingOverlayService.hide();
+
         if (success) {
           NotificationService.showSuccess(
             context,
@@ -292,6 +301,15 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
           NotificationService.showError(
             context,
             crudProvider.errorMessage ?? AppStrings.errorGeneric,
+          );
+        }
+      } catch (e) {
+        // Ocultar loading en caso de error
+        LoadingOverlayService.hide();
+        if (mounted) {
+          NotificationService.showError(
+            context,
+            'Error al eliminar el registro',
           );
         }
       }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:herramienta_case/core/services/loading_overlay_service.dart';
 import '../providers/dynamic_crud_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../../../database_selector/presentation/providers/database_selector_provider.dart';
@@ -64,9 +65,11 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    // Mostrar loading overlay profesional
+    LoadingOverlayService.show(
+      context,
+      text: widget.isEdit ? 'Actualizando registro...' : 'Guardando registro...',
+    );
 
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
@@ -79,26 +82,27 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     );
 
     bool success;
-    if (widget.isEdit && widget.recordId != null) {
-      success = await crudProvider.updateRecord(
-        databaseName: dbProvider.currentDatabaseName!,
-        tableName: widget.tableName,
-        id: widget.recordId!,
-        data: preparedData,
-        token: 'mock_token',
-      );
-    } else {
-      success = await crudProvider.createRecord(
-        databaseName: dbProvider.currentDatabaseName!,
-        tableName: widget.tableName,
-        data: preparedData,
-        token: 'mock_token',
-      );
+    try {
+      if (widget.isEdit && widget.recordId != null) {
+        success = await crudProvider.updateRecord(
+          databaseName: dbProvider.currentDatabaseName!,
+          tableName: widget.tableName,
+          id: widget.recordId!,
+          data: preparedData,
+          token: 'mock_token',
+        );
+      } else {
+        success = await crudProvider.createRecord(
+          databaseName: dbProvider.currentDatabaseName!,
+          tableName: widget.tableName,
+          data: preparedData,
+          token: 'mock_token',
+        );
+      }
+    } finally {
+      // Ocultar loading overlay
+      LoadingOverlayService.hide();
     }
-
-    setState(() {
-      _isLoading = false;
-    });
 
     if (mounted) {
       if (success) {

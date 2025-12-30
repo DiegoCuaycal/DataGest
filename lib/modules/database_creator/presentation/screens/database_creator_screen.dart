@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
+import 'package:herramienta_case/core/services/loading_overlay_service.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
 import '../../domain/models/table_entity.dart';
@@ -503,29 +504,49 @@ class _DatabaseCreatorScreenState extends State<DatabaseCreatorScreen> {
 
     if (confirmed != true) return;
 
-    // Enviar al backend
-    await provider.submitSchema(schema);
+    // Mostrar loading overlay durante la creación
+    LoadingOverlayService.show(
+      context,
+      text: 'Creando base de datos "${schema.name}"...',
+    );
 
-    if (!mounted) return;
+    try {
+      // Enviar al backend
+      await provider.submitSchema(schema);
 
-    if (provider.errorMessage != null) {
-      NotificationService.showError(context, provider.errorMessage!);
-    } else {
-      NotificationService.showSuccess(
-        context,
-        'Base de datos "${schema.name}" creada exitosamente',
-      );
+      if (!mounted) return;
 
-      // Recargar la lista de bases de datos para mostrar la nueva
-      final databaseSelectorProvider = context.read<DatabaseSelectorProvider>();
-      await databaseSelectorProvider.loadAvailableDatabases(useMock: false);
+      // Ocultar loading
+      LoadingOverlayService.hide();
 
-      // Limpiar el estado del provider para la próxima creación
-      provider.resetSchema();
+      if (provider.errorMessage != null) {
+        NotificationService.showError(context, provider.errorMessage!);
+      } else {
+        NotificationService.showSuccess(
+          context,
+          'Base de datos "${schema.name}" creada exitosamente',
+        );
 
-      // Regresar a la pantalla de selección
+        // Recargar la lista de bases de datos para mostrar la nueva
+        final databaseSelectorProvider = context.read<DatabaseSelectorProvider>();
+        await databaseSelectorProvider.loadAvailableDatabases(useMock: false);
+
+        // Limpiar el estado del provider para la próxima creación
+        provider.resetSchema();
+
+        // Regresar a la pantalla de selección
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      // Ocultar loading en caso de error
+      LoadingOverlayService.hide();
       if (mounted) {
-        Navigator.pop(context);
+        NotificationService.showError(
+          context,
+          'Error al crear la base de datos: ${e.toString()}',
+        );
       }
     }
   }

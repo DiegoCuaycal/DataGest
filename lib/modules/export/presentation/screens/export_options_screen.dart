@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
+import 'package:herramienta_case/core/services/loading_overlay_service.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
@@ -302,17 +303,28 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
         ? allTables
         : allTables.where((t) => _selectedTables.contains(t.table)).toList();
 
-    // Exportar
-    // TEMPORAL: Activar modo de prueba por defecto hasta que se arregle el backend
-    final results = await exportProvider.exportMultipleTables(
-      databaseName: databaseName,
-      tables: tablesToExport,
-      baseConfig: config,
-      token: token,
-      useMockData: true, // CAMBIAR A false cuando el backend funcione
+    // Mostrar loading overlay durante la exportación
+    LoadingOverlayService.show(
+      context,
+      text: 'Exportando ${tablesToExport.length} tabla${tablesToExport.length > 1 ? 's' : ''}...',
     );
 
-    if (context.mounted) {
+    try {
+      // Exportar
+      // TEMPORAL: Activar modo de prueba por defecto hasta que se arregle el backend
+      final results = await exportProvider.exportMultipleTables(
+        databaseName: databaseName,
+        tables: tablesToExport,
+        baseConfig: config,
+        token: token,
+        useMockData: true, // CAMBIAR A false cuando el backend funcione
+      );
+
+      if (!context.mounted) return;
+
+      // Ocultar loading
+      LoadingOverlayService.hide();
+
       if (results != null && results.isNotEmpty) {
         final totalRecords = results.fold<int>(
           0,
@@ -332,6 +344,15 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
         NotificationService.showError(
           context,
           exportProvider.errorMessage!,
+        );
+      }
+    } catch (e) {
+      // Ocultar loading en caso de error
+      LoadingOverlayService.hide();
+      if (context.mounted) {
+        NotificationService.showError(
+          context,
+          'Error durante la exportación: ${e.toString()}',
         );
       }
     }

@@ -1,7 +1,7 @@
 /// Textos y mensajes de la aplicación
 class AppStrings {
   // General
-  static const String appName = 'Herramientas CASE';
+  static const String appName = 'DataGest';
   static const String ok = 'Aceptar';
   static const String cancel = 'Cancelar';
   static const String save = 'Guardar';

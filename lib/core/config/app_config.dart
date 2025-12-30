@@ -1,7 +1,7 @@
 /// Configuración general de la aplicación
 class AppConfig {
   /// Nombre de la aplicación
-  static const String appName = 'Data Gest';
+  static const String appName = 'DataGest';
 
   /// Versión de la aplicación
   static const String appVersion = '1.0.0';

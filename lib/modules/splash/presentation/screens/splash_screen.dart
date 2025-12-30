@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/config/routes.dart';
+import 'package:lottie/lottie.dart';
 
 /// Pantalla de inicio profesional con animación de carga
 class SplashScreen extends StatefulWidget {
@@ -16,9 +17,13 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _fadeController;
   late AnimationController _scaleController;
   late AnimationController _progressController;
+  late AnimationController _rotationController;
+  late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _progressAnimation;
+  late Animation<double> _rotationAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -53,6 +58,34 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.elasticOut,
     ));
 
+    // Animación de rotación continua
+    _rotationController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
+      vsync: this,
+    );
+
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _rotationController,
+      curve: Curves.linear,
+    ));
+
+    // Animación de pulsación (breathing effect)
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.08,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
     // Animación de progreso
     _progressController = AnimationController(
       duration: const Duration(milliseconds: 2000),
@@ -74,6 +107,11 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 400));
     _progressController.forward();
 
+    // Iniciar animaciones continuas después de la entrada
+    await Future.delayed(const Duration(milliseconds: 600));
+    _rotationController.repeat();
+    _pulseController.repeat(reverse: true);
+
     // Esperar a que termine la secuencia y navegar
     await Future.delayed(const Duration(milliseconds: 2200));
 
@@ -87,6 +125,8 @@ class _SplashScreenState extends State<SplashScreen>
     _fadeController.dispose();
     _scaleController.dispose();
     _progressController.dispose();
+    _rotationController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -96,12 +136,12 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              AppColors.primary,
-              AppColors.primaryDark,
-              const Color(0xFF7C4DFF), // Purple gradient similar to icon
+              AppColors.primaryLight, // Azure Blue claro
+              AppColors.primary, // Azure Blue principal
+              AppColors.primaryDark, // Azure Blue oscuro - coherencia cromática total
             ],
           ),
         ),
@@ -112,28 +152,42 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 const Spacer(flex: 2),
 
-                // Logo animado con efecto de brillo
+                // Logo animado con múltiples efectos
                 FadeTransition(
                   opacity: _fadeAnimation,
                   child: ScaleTransition(
                     scale: _scaleAnimation,
                     child: AnimatedBuilder(
-                      animation: _scaleController,
+                      animation: Listenable.merge([_pulseAnimation, _rotationAnimation]),
                       builder: (context, child) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(35),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.white.withValues(
-                                  alpha: 0.3 * _scaleController.value,
-                                ),
-                                blurRadius: 30 * _scaleController.value,
-                                spreadRadius: 10 * _scaleController.value,
+                        return Transform.scale(
+                          scale: _pulseAnimation.value,
+                          child: Transform.rotate(
+                            angle: _rotationAnimation.value * 2 * 3.14159,
+                            child: Container(
+                              width: 200,
+                              height: 200,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: AppColors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(35),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.white.withValues(alpha: 0.3),
+                                    blurRadius: 30,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
                               ),
-                            ],
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Image.asset(
+                                  'assets/images/DataGestIcon.png',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
                           ),
-                          child: _buildLogo(),
                         );
                       },
                     ),
@@ -156,7 +210,7 @@ class _SplashScreenState extends State<SplashScreen>
                           letterSpacing: 2,
                           shadows: [
                             Shadow(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                               offset: const Offset(0, 2),
                               blurRadius: 4,
                             ),
@@ -240,33 +294,4 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildLogo() {
-    return Container(
-      width: 160,
-      height: 160,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(35),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 40,
-            offset: const Offset(0, 15),
-            spreadRadius: 5,
-          ),
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(35),
-        child: Image.asset(
-          'assets/images/DataGestIcon.png',
-          fit: BoxFit.cover,
-        ),
-      ),
-    );
-  }
 }

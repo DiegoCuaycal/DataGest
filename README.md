@@ -1,6 +1,6 @@
 # DataGest - Frontend Flutter
 
-Sistema de gestión de Herramientas CASE con autenticación, desarrollado en Flutter siguiendo Clean Architecture.
+Sistema profesional de gestión de datos con autenticación, desarrollado en Flutter siguiendo Clean Architecture. DataGest permite gestionar bases de datos de manera dinámica y eficiente con una interfaz moderna y profesional.
 
 ## 🏗️ Arquitectura
 
