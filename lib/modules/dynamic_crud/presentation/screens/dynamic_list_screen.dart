@@ -113,6 +113,24 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     }
   }
 
+  /// 🚨 FUNCIÓN SABUESO 🚨
+  /// Busca el valor de una columna aunque el nombre venga diferente (Mayúsculas/Minúsculas)
+  dynamic _getValueFuzzy(Map<String, dynamic> record, String columnName) {
+    // 1. Intento directo
+    if (record.containsKey(columnName)) return record[columnName];
+
+    // 2. Intento Fuzzy (limpiando guiones y case)
+    final cleanCol = columnName.replaceAll('_', '').toLowerCase();
+    
+    for (var key in record.keys) {
+      final cleanKey = key.replaceAll('_', '').toLowerCase();
+      if (cleanKey == cleanCol) {
+        return record[key];
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final metadataProvider = context.watch<MetadataProvider>();
@@ -312,6 +330,8 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
 
                       final record = provider.records[index];
                       final pk = pkInfo?.first.column;
+                      // Buscar el valor del ID usando Fuzzy por si acaso
+                      final pkValue = pk != null ? _getValueFuzzy(record, pk) : null;
 
                       // Card para cada registro (diseño móvil)
                       return Card(
@@ -323,10 +343,10 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                           onTap: () {
-                            if (pk != null) {
+                            if (pkValue != null) {
                               Navigator.pushNamed(
                                 context,
-                                '/table/${widget.tableName}/edit/${record[pk]}',
+                                '/table/${widget.tableName}/edit/$pkValue',
                               ).then((_) => _loadData());
                             }
                           },
@@ -347,37 +367,39 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                                     })
                                     .take(4) // Mostrar máximo 4 campos para no sobrecargar
                                     .map((col) {
-                                  final value = record[col.name];
-                                  // Si el valor es null o vacío, no mostrarlo
-                                  if (value == null || value.toString().trim().isEmpty) {
-                                    return const SizedBox.shrink();
-                                  }
+                                      // ✅ USAMOS LA FUNCIÓN FUZZY AQUÍ
+                                      final value = _getValueFuzzy(record, col.name);
+                                      
+                                      // Si el valor es null o vacío, no mostrarlo
+                                      if (value == null || value.toString().trim().isEmpty) {
+                                        return const SizedBox.shrink();
+                                      }
 
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(
-                                          width: 100,
-                                          child: Text(
-                                            '${col.name}:',
-                                            style: AppStyles.bodySmall.copyWith(
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.textSecondary,
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 6),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(
+                                              width: 100,
+                                              child: Text(
+                                                '${col.name}:',
+                                                style: AppStyles.bodySmall.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textSecondary,
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                            Expanded(
+                                              child: Text(
+                                                value.toString(),
+                                                style: AppStyles.bodyMedium,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        Expanded(
-                                          child: Text(
-                                            value.toString(),
-                                            style: AppStyles.bodyMedium,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }),
+                                      );
+                                    }),
 
                                 // Botones de acción
                                 const SizedBox(height: 8),
@@ -386,10 +408,10 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                                   children: [
                                     TextButton.icon(
                                       onPressed: () {
-                                        if (pk != null) {
+                                        if (pkValue != null) {
                                           Navigator.pushNamed(
                                             context,
-                                            '/table/${widget.tableName}/edit/${record[pk]}',
+                                            '/table/${widget.tableName}/edit/$pkValue',
                                           ).then((_) => _loadData());
                                         }
                                       },
@@ -438,6 +460,9 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
 
   Future<void> _confirmDelete(Map<String, dynamic> record, String? pkColumn) async {
     if (pkColumn == null) return;
+    
+    // Usar Fuzzy también para encontrar el ID al borrar
+    final pkValue = _getValueFuzzy(record, pkColumn);
 
     final confirmed = await NotificationService.showConfirmDialog(
       context,
@@ -448,7 +473,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
       confirmColor: AppColors.error,
     );
 
-    if (confirmed && mounted) {
+    if (confirmed && mounted && pkValue != null) {
       final dbProvider = context.read<DatabaseSelectorProvider>();
       final crudProvider = context.read<DynamicCrudProvider>();
       final authProvider = context.read<AuthProvider>();
@@ -459,7 +484,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
         final success = await crudProvider.deleteRecord(
           databaseName: dbProvider.currentDatabaseName!,
           tableName: widget.tableName,
-          id: record[pkColumn],
+          id: pkValue,
           token: authProvider.currentUser?.token ?? '',
         );
 

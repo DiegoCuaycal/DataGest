@@ -8,6 +8,7 @@ import '../../../home/presentation/providers/recent_activity_provider.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/services/form_generator_service.dart';
+import '../../data/models/column_info_model.dart'; // Asegúrate de importar esto
 
 class DynamicFormScreen extends StatefulWidget {
   final String tableName;
@@ -43,14 +44,32 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     }
   }
 
+  /// 🚨 FUNCIÓN SABUESO AUXILIAR (Igual que en la lista)
+  /// Ayuda a encontrar el valor aunque las mayúsculas/minúsculas no coincidan
+  dynamic _getValueFuzzy(Map<String, dynamic> record, String columnName) {
+    // 1. Intento directo
+    if (record.containsKey(columnName)) return record[columnName];
+
+    // 2. Intento Fuzzy (limpiando guiones y case)
+    final cleanCol = columnName.replaceAll('_', '').toLowerCase();
+    
+    for (var key in record.keys) {
+      final cleanKey = key.replaceAll('_', '').toLowerCase();
+      if (cleanKey == cleanCol) {
+        return record[key];
+      }
+    }
+    return null;
+  }
+
   Future<void> _loadRecord() async {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final authProvider = context.read<AuthProvider>();
+    final metadataProvider = context.read<MetadataProvider>(); // Necesitamos metadata para saber las columnas
     final token = authProvider.currentUser?.token ?? '';
 
     print('🔍 Cargando registro para editar: ${widget.recordId}');
-    print('🔑 Token: ${token.isEmpty ? "VACÍO" : "${token.substring(0, 20)}..."}');
 
     if (dbProvider.currentDatabaseName != null && widget.recordId != null) {
       await crudProvider.loadTableRecord(
@@ -64,9 +83,13 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         setState(() {
           _isLoadingRecord = false;
           if (crudProvider.currentRecord != null) {
-            _formData.clear();
-            _formData.addAll(crudProvider.currentRecord!);
-            print('✅ Datos cargados en el formulario: $_formData');
+            
+            // 🚨 AQUÍ ESTÁ LA SOLUCIÓN DEL ERROR 400 🚨
+            // En lugar de copiar todo a lo bruto, usamos _populateFormData
+            // para asegurar que las llaves coincidan con lo que espera el generador
+            final columns = metadataProvider.getColumnsForTable(widget.tableName);
+            _populateFormData(columns, crudProvider.currentRecord!);
+            
           } else {
             print('❌ No se pudieron cargar los datos del registro');
           }
@@ -75,10 +98,27 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     }
   }
 
+  /// ✅ Llena el formData con los datos existentes mapeando correctamente las columnas
+  void _populateFormData(List<ColumnInfoModel> columns, Map<String, dynamic> initialData) {
+    _formData.clear();
+    for (var col in columns) {
+      // Obtenemos el valor sin importar si viene en Mayúsculas o minúsculas
+      final val = _getValueFuzzy(initialData, col.name);
+      
+      // Solo agregamos si tiene valor y NO es una columna de auditoría o ID auto-incremental
+      if (val != null && !col.isIdentity) {
+        _formData[col.name] = val;
+      }
+    }
+    print('✅ FormData inicializado con ${_formData.length} campos (Pre-carga inteligente)');
+  }
+
   Future<void> _saveRecord() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
+    _formKey.currentState!.save(); // Guarda los cambios de los TextFields en _formData
 
     // Mostrar loading overlay profesional
     LoadingOverlayService.show(
@@ -93,6 +133,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final token = authProvider.currentUser?.token ?? '';
 
     final columns = metadataProvider.getColumnsForTable(widget.tableName);
+    
+    // Aquí _formData ya tiene TODOS los datos (los viejos cargados + los nuevos editados)
     final preparedData = _formGenerator.prepareDataForSubmit(
       formData: _formData,
       columns: columns,
@@ -101,7 +143,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
     print('💾 Guardando registro...');
     print('📦 Datos a enviar: $preparedData');
-    print('🔑 Token: ${token.isEmpty ? "VACÍO" : "${token.substring(0, 20)}..."}');
 
     bool success;
     try {
@@ -156,7 +197,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
               content: Text(widget.isEdit ? 'Registro actualizado' : 'Registro creado'),
             ),
           );
-          Navigator.pop(context);
+          Navigator.pop(context, true); // Retornamos true para recargar la lista
         }
       } else {
         // Notificación de error
@@ -204,7 +245,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       tableName: widget.tableName,
       metadata: metadata,
       currentDatabase: dbProvider.currentDatabaseName!,
-      initialData: widget.isEdit ? _formData : null,
+      // Enviamos _formData como datos iniciales para que el formulario se pinte lleno
+      initialData: widget.isEdit ? _formData : null, 
       onFieldChanged: (fieldName, value) {
         setState(() {
           _formData[fieldName] = value;
