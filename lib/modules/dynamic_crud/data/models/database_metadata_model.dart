@@ -2,6 +2,7 @@ import 'table_info_model.dart';
 import 'column_info_model.dart';
 import 'primary_key_model.dart';
 import 'foreign_key_model.dart';
+import '../../../../core/network/foreign_key_config.dart';
 
 class DatabaseMetadataModel {
   final String databaseName;
@@ -64,13 +65,38 @@ class DatabaseMetadataModel {
   }
 
   ForeignKeyModel? getForeignKeyForColumn(String tableName, String columnName) {
+    // 1. Primero intentar buscar en fkInfo (si el backend devuelve FKs)
     try {
-      return fkInfo.firstWhere(
+      final fk = fkInfo.firstWhere(
         (fk) => fk.table == tableName && fk.column == columnName,
       );
+      return fk;
     } catch (e) {
-      return null;
+      // No se encontró en fkInfo, continuar con detección automática
     }
+
+    // 2. Si no está en fkInfo, usar detección automática basada en convenciones
+    if (ForeignKeyConfig.isForeignKey(tableName, columnName)) {
+      final reference = ForeignKeyConfig.getForeignKeyReference(
+        tableName: tableName,
+        columnName: columnName,
+      );
+
+      if (reference != null) {
+        // Crear un ForeignKeyModel virtual basado en la convención
+        return ForeignKeyModel(
+          schema: 'dbo', // Schema por defecto
+          table: tableName,
+          column: columnName,
+          foreignKeyName: 'FK_${tableName}_$columnName', // Nombre sintético
+          referenceSchema: 'dbo',
+          referenceTable: reference['referenceTable'] as String,
+          referenceColumn: reference['referenceColumn'] as String,
+        );
+      }
+    }
+
+    return null;
   }
 
   List<PrimaryKeyModel> getPrimaryKeysForTable(String tableName) {

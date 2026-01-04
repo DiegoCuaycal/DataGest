@@ -72,6 +72,8 @@ class AppStrings {
   static const String help = 'Ayuda';
   static const String quickAccess = 'Accesos Rápidos';
   static const String reports = 'Reportes';
+  static const String crudSimple = 'CRUD Simple';
+  static const String crudSimpleDescription = 'Gestiona las tablas de tu base de datos';
 
   // Base de datos
   static const String database = 'Base de Datos';

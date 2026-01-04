@@ -23,7 +23,7 @@ class AuthRemoteDataSource {
       print('🗄️  Base de datos: ${databaseName ?? "No especificada"}');
       print('📍 URL: ${ApiEndpoints.buildUrl(endpoint)}');
 
-      // Preparar headers personalizados
+      // Preparar headers personalizados con las credenciales
       final headers = {
         'X-Usuario': username,
         'X-Password': password,
@@ -33,6 +33,8 @@ class AuthRemoteDataSource {
       if (databaseName != null && databaseName.isNotEmpty) {
         headers['X-DbName'] = databaseName;
       }
+
+      print('📤 Headers: ${headers.keys.join(", ")}');
 
       final response = await apiClient.post(
         endpoint,

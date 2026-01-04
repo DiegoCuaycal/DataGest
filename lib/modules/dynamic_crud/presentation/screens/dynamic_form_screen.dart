@@ -6,6 +6,7 @@ import '../providers/metadata_provider.dart';
 import '../../../database_selector/presentation/providers/database_selector_provider.dart';
 import '../../../home/presentation/providers/recent_activity_provider.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/services/form_generator_service.dart';
 
 class DynamicFormScreen extends StatefulWidget {
@@ -29,11 +30,13 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   final Map<String, dynamic> _formData = {};
   final FormGeneratorService _formGenerator = FormGeneratorService();
   bool _isLoading = false;
+  bool _isLoadingRecord = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.isEdit && widget.recordId != null) {
+      _isLoadingRecord = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadRecord();
       });
@@ -43,18 +46,30 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   Future<void> _loadRecord() async {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.currentUser?.token ?? '';
+
+    print('🔍 Cargando registro para editar: ${widget.recordId}');
+    print('🔑 Token: ${token.isEmpty ? "VACÍO" : "${token.substring(0, 20)}..."}');
 
     if (dbProvider.currentDatabaseName != null && widget.recordId != null) {
       await crudProvider.loadTableRecord(
         databaseName: dbProvider.currentDatabaseName!,
         tableName: widget.tableName,
         id: widget.recordId!,
-        token: 'mock_token',
+        token: token,
       );
 
-      if (mounted && crudProvider.currentRecord != null) {
+      if (mounted) {
         setState(() {
-          _formData.addAll(crudProvider.currentRecord!);
+          _isLoadingRecord = false;
+          if (crudProvider.currentRecord != null) {
+            _formData.clear();
+            _formData.addAll(crudProvider.currentRecord!);
+            print('✅ Datos cargados en el formulario: $_formData');
+          } else {
+            print('❌ No se pudieron cargar los datos del registro');
+          }
         });
       }
     }
@@ -74,12 +89,19 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final metadataProvider = context.read<MetadataProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.currentUser?.token ?? '';
 
     final columns = metadataProvider.getColumnsForTable(widget.tableName);
     final preparedData = _formGenerator.prepareDataForSubmit(
       formData: _formData,
       columns: columns,
+      currentUserId: authProvider.currentUser?.id,
     );
+
+    print('💾 Guardando registro...');
+    print('📦 Datos a enviar: $preparedData');
+    print('🔑 Token: ${token.isEmpty ? "VACÍO" : "${token.substring(0, 20)}..."}');
 
     bool success;
     try {
@@ -89,14 +111,14 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
           tableName: widget.tableName,
           id: widget.recordId!,
           data: preparedData,
-          token: 'mock_token',
+          token: token,
         );
       } else {
         success = await crudProvider.createRecord(
           databaseName: dbProvider.currentDatabaseName!,
           tableName: widget.tableName,
           data: preparedData,
-          token: 'mock_token',
+          token: token,
         );
       }
     } finally {
@@ -158,7 +180,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final dbProvider = context.watch<DatabaseSelectorProvider>();
     final crudProvider = context.watch<DynamicCrudProvider>();
 
-    if (widget.isEdit && crudProvider.isLoading) {
+    // Mostrar loading mientras se carga el registro para editar
+    if (widget.isEdit && (_isLoadingRecord || crudProvider.isLoading)) {
       return Scaffold(
         appBar: AppBar(
           title: Text('${widget.isEdit ? 'Editar' : 'Crear'} ${widget.tableName}'),

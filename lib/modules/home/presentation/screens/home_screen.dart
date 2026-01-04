@@ -101,22 +101,19 @@ class HomeScreen extends StatelessWidget {
               crossAxisSpacing: AppStyles.paddingMedium,
               children: [
                 HomeCard(
-                  title: AppStrings.tools,
-                  icon: AppIcons.tool,
+                  title: AppStrings.crudSimple,
+                  icon: AppIcons.database,
                   color: AppColors.primary,
                   onTap: () {
-                    AppRoutes.navigateTo(context, AppRoutes.toolsList);
+                    AppRoutes.navigateTo(context, AppRoutes.tablesMenu);
                   },
                 ),
                 HomeCard(
-                  title: AppStrings.categories,
-                  icon: AppIcons.category,
+                  title: AppStrings.tools,
+                  icon: AppIcons.tool,
                   color: AppColors.secondary,
                   onTap: () {
-                    NotificationService.showInfo(
-                      context,
-                      AppStrings.featureInDevelopment,
-                    );
+                    AppRoutes.navigateTo(context, AppRoutes.toolsList);
                   },
                 ),
                 HomeCard(

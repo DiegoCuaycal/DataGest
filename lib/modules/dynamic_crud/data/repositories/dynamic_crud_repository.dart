@@ -45,6 +45,37 @@ class DynamicCrudRepository {
     }
   }
 
+  Future<Map<String, dynamic>> getTableRecordsPaginated({
+    required String databaseName,
+    required String tableName,
+    required String token,
+    required int page,
+    required int pageSize,
+    String? searchTerm,
+    bool useMock = false,
+  }) async {
+    try {
+      if (useMock) {
+        return await remoteDataSource.getMockTableRecordsPaginated(
+          tableName: tableName,
+          page: page,
+          pageSize: pageSize,
+          searchTerm: searchTerm,
+        );
+      }
+      return await remoteDataSource.getTableRecordsPaginated(
+        databaseName: databaseName,
+        tableName: tableName,
+        token: token,
+        page: page,
+        pageSize: pageSize,
+        searchTerm: searchTerm,
+      );
+    } catch (e) {
+      throw Exception('Repository error: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> getTableRecord({
     required String databaseName,
     required String tableName,
@@ -123,6 +154,7 @@ class DynamicCrudRepository {
     required String databaseName,
     required String tableName,
     required String token,
+    List<String>? displayColumns,
     bool useMock = false,
   }) async {
     try {
@@ -133,6 +165,7 @@ class DynamicCrudRepository {
         databaseName: databaseName,
         tableName: tableName,
         token: token,
+        displayColumns: displayColumns,
       );
     } catch (e) {
       throw Exception('Repository error: $e');

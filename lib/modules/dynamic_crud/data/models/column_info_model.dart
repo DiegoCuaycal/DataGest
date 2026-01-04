@@ -49,7 +49,12 @@ class ColumnInfoModel {
     if (characterMaximumLength == null || characterMaximumLength == 'null') {
       return null;
     }
-    return int.tryParse(characterMaximumLength!);
+    final parsed = int.tryParse(characterMaximumLength!);
+    // Si el parsing falla o el valor es negativo o cero, retornar null (sin límite)
+    if (parsed == null || parsed <= 0) {
+      return null;
+    }
+    return parsed;
   }
 
   @override

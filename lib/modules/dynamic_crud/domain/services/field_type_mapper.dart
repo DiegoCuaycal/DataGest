@@ -87,8 +87,13 @@ class FieldTypeMapper {
         if (value is double) return value;
         return double.tryParse(value.toString());
       } else if (isDateTimeType(sqlType)) {
-        if (value is DateTime) return value;
-        return DateTime.tryParse(value.toString());
+        // Para DateTime, siempre convertir a String ISO 8601 para JSON
+        if (value is DateTime) {
+          return value.toIso8601String();
+        }
+        // Si es String, intentar parsear y luego convertir a ISO 8601
+        final dateTime = DateTime.tryParse(value.toString());
+        return dateTime?.toIso8601String();
       } else if (isBooleanType(sqlType)) {
         if (value is bool) return value;
         if (value is int) return value == 1;

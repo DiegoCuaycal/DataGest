@@ -18,7 +18,29 @@ class MetadataProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  List<TableInfoModel> get tables => _metadata?.tables ?? [];
+  // Tablas con CRUD habilitado por base de datos
+  static const Map<String, List<String>> _allowedTables = {
+    'Estudiantes': ['cursos', 'estudiantes', 'inscripciones', 'profesores', 'usuarios'],
+    'Medicos': ['pacientes', 'medicos', 'citas', 'diagnosticos'],
+    'Salud': ['pacientes', 'medicos', 'citas', 'diagnosticos'],
+    'Productos': ['productos', 'categorias', 'proveedores', 'inventario'],
+  };
+
+  List<TableInfoModel> get tables {
+    if (_metadata == null) return [];
+
+    final dbName = _metadata!.databaseName;
+    final allowed = _allowedTables[dbName];
+
+    // Si no hay configuración específica, mostrar todas las tablas
+    if (allowed == null) return _metadata!.tables;
+
+    // Filtrar solo las tablas permitidas
+    return _metadata!.tables.where((table) {
+      return allowed.contains(table.table.toLowerCase());
+    }).toList();
+  }
+
   String? get databaseName => _metadata?.databaseName;
 
   Future<void> loadMetadata({
