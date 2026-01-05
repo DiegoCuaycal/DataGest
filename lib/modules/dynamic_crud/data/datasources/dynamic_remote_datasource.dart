@@ -187,8 +187,11 @@ class DynamicRemoteDataSource {
             jsonData.containsKey('records') &&
             jsonData.containsKey('totalRecords')) {
           print('✅ Usando paginación del backend');
+          final records = (jsonData['records'] as List).cast<Map<String, dynamic>>();
+          // Ordenar registros más nuevos primero (descendente)
+          _sortRecordsDescending(records);
           return {
-            'records': (jsonData['records'] as List).cast<Map<String, dynamic>>(),
+            'records': records,
             'totalRecords': jsonData['totalRecords'] as int,
           };
         }
@@ -200,8 +203,11 @@ class DynamicRemoteDataSource {
             final data = apiResponse.data as Map<String, dynamic>;
             if (data.containsKey('records') && data.containsKey('totalRecords')) {
               print('✅ Usando paginación del backend (ApiResponse)');
+              final records = (data['records'] as List).cast<Map<String, dynamic>>();
+              // Ordenar registros más nuevos primero (descendente)
+              _sortRecordsDescending(records);
               return {
-                'records': (data['records'] as List).cast<Map<String, dynamic>>(),
+                'records': records,
                 'totalRecords': data['totalRecords'] as int,
               };
             }
@@ -220,6 +226,9 @@ class DynamicRemoteDataSource {
         tableName: tableName,
         token: token,
       );
+
+      // Ordenar registros más nuevos primero (descendente)
+      _sortRecordsDescending(allRecords);
 
       // Aplicar búsqueda si existe
       var filteredRecords = allRecords;
@@ -248,6 +257,80 @@ class DynamicRemoteDataSource {
       };
     } catch (e) {
       throw Exception('Error fetching records: $e');
+    }
+  }
+
+  /// Ordena los registros en orden descendente (más nuevos primero)
+  /// Intenta ordenar por: id, ID, created_at, createdAt, updated_at, o el primer campo numérico encontrado
+  void _sortRecordsDescending(List<Map<String, dynamic>> records) {
+    if (records.isEmpty) return;
+
+    // Buscar la columna de ordenamiento (priorizar id o columnas de fecha)
+    String? sortColumn;
+    final firstRecord = records.first;
+
+    // Prioridad 1: Buscar columnas de fecha de creación
+    for (var key in firstRecord.keys) {
+      final lowerKey = key.toLowerCase();
+      if (lowerKey.contains('created') || lowerKey.contains('fecha_creacion')) {
+        sortColumn = key;
+        break;
+      }
+    }
+
+    // Prioridad 2: Buscar columnas de ID
+    if (sortColumn == null) {
+      for (var key in firstRecord.keys) {
+        final lowerKey = key.toLowerCase();
+        if (lowerKey == 'id' || lowerKey.endsWith('id')) {
+          sortColumn = key;
+          break;
+        }
+      }
+    }
+
+    // Prioridad 3: Primer campo numérico encontrado
+    if (sortColumn == null) {
+      for (var key in firstRecord.keys) {
+        if (firstRecord[key] is num) {
+          sortColumn = key;
+          break;
+        }
+      }
+    }
+
+    // Si encontramos una columna para ordenar, ordenamos descendente
+    if (sortColumn != null) {
+      final column = sortColumn;
+      records.sort((a, b) {
+        final aValue = a[column];
+        final bValue = b[column];
+
+        // Manejo de valores null
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+
+        // Comparación descendente (más nuevo primero)
+        if (aValue is num && bValue is num) {
+          return bValue.compareTo(aValue);
+        }
+
+        if (aValue is String && bValue is String) {
+          // Intentar parsear como fecha
+          try {
+            final dateA = DateTime.parse(aValue);
+            final dateB = DateTime.parse(bValue);
+            return dateB.compareTo(dateA);
+          } catch (_) {
+            // Si no son fechas, comparar como strings
+            return bValue.compareTo(aValue);
+          }
+        }
+
+        return 0;
+      });
+      print('🔽 Registros ordenados descendente por: $column');
     }
   }
 

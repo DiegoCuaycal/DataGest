@@ -49,15 +49,12 @@ class PaginationControls extends StatelessWidget {
       children: [
         // Información de registros
         _buildRecordsInfo(),
-        const SizedBox(height: 12),
-        // Controles de navegación
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildPageSizeSelector(),
-            _buildNavigationButtons(),
-          ],
-        ),
+        const SizedBox(height: 8),
+        // Selector de tamaño de página
+        _buildPageSizeSelector(),
+        const SizedBox(height: 8),
+        // Controles de navegación en su propia fila
+        _buildNavigationButtons(),
       ],
     );
   }
@@ -78,7 +75,8 @@ class PaginationControls extends StatelessWidget {
 
   Widget _buildPageSizeSelector() {
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.max,
       children: [
         const Text(
           'Mostrar:',
@@ -129,7 +127,8 @@ class PaginationControls extends StatelessWidget {
 
   Widget _buildNavigationButtons() {
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.max,
       children: [
         // Botón primera página
         IconButton(
@@ -138,6 +137,7 @@ class PaginationControls extends StatelessWidget {
           tooltip: 'Primera página',
           color: AppColors.primary,
           disabledColor: AppColors.textDisabled,
+          visualDensity: VisualDensity.compact,
         ),
         // Botón página anterior
         IconButton(
@@ -146,20 +146,24 @@ class PaginationControls extends StatelessWidget {
           tooltip: 'Página anterior',
           color: AppColors.primary,
           disabledColor: AppColors.textDisabled,
+          visualDensity: VisualDensity.compact,
         ),
         // Indicador de página
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            'Página $currentPage de $totalPages',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.primary,
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Pág $currentPage de $totalPages',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.primary,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
@@ -171,6 +175,7 @@ class PaginationControls extends StatelessWidget {
           tooltip: 'Página siguiente',
           color: AppColors.primary,
           disabledColor: AppColors.textDisabled,
+          visualDensity: VisualDensity.compact,
         ),
         // Botón última página
         IconButton(
@@ -180,6 +185,7 @@ class PaginationControls extends StatelessWidget {
           tooltip: 'Última página',
           color: AppColors.primary,
           disabledColor: AppColors.textDisabled,
+          visualDensity: VisualDensity.compact,
         ),
       ],
     );

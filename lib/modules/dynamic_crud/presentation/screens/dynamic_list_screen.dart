@@ -7,6 +7,7 @@ import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/services/loading_overlay_service.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/shared/widgets/search_filter_bar.dart';
+import 'package:herramienta_case/shared/widgets/pagination_controls.dart';
 import '../providers/dynamic_crud_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../../../database_selector/presentation/providers/database_selector_provider.dart';
@@ -26,36 +27,13 @@ class DynamicListScreen extends StatefulWidget {
 }
 
 class _DynamicListScreenState extends State<DynamicListScreen> {
-  final ScrollController _scrollController = ScrollController();
-
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
       _registerActivity();
     });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_isBottom) {
-      _loadMoreData();
-    }
-  }
-
-  bool get _isBottom {
-    if (!_scrollController.hasClients) return false;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
-    return currentScroll >= (maxScroll * 0.9); // Cargar cuando llegue al 90%
   }
 
   void _registerActivity() {
@@ -65,7 +43,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
         );
   }
 
-  void _loadData() {
+  void _loadData({int? page}) {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final authProvider = context.read<AuthProvider>();
@@ -78,23 +56,20 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
         databaseName: dbProvider.currentDatabaseName!,
         tableName: widget.tableName,
         token: token,
-        resetData: true, // Siempre resetear cuando se carga manualmente
+        page: page,
+        resetData: true,
       );
     }
   }
 
-  void _loadMoreData() {
-    final dbProvider = context.read<DatabaseSelectorProvider>();
-    final crudProvider = context.read<DynamicCrudProvider>();
-    final authProvider = context.read<AuthProvider>();
+  void _handlePageChanged(int newPage) {
+    _loadData(page: newPage);
+  }
 
-    if (dbProvider.currentDatabaseName != null && crudProvider.hasMoreData) {
-      crudProvider.loadMoreRecords(
-        databaseName: dbProvider.currentDatabaseName!,
-        tableName: widget.tableName,
-        token: authProvider.currentUser?.token ?? '',
-      );
-    }
+  void _handlePageSizeChanged(int newPageSize) {
+    final crudProvider = context.read<DynamicCrudProvider>();
+    crudProvider.setPageSize(newPageSize);
+    _loadData(page: 1);
   }
 
   void _handleSearchChanged(String searchTerm) {
@@ -300,160 +275,165 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                   );
                 }
 
-                // Lista con infinite scroll
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    _loadData();
-                  },
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.only(
-                      left: AppStyles.paddingMedium,
-                      right: AppStyles.paddingMedium,
-                      top: AppStyles.paddingSmall,
-                      bottom: 80, // Espacio para el FAB
-                    ),
-                    itemCount: provider.records.length + (provider.hasMoreData ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      // Mostrar indicador de carga al final
-                      if (index >= provider.records.length) {
-                        if (provider.isLoadingMore) {
-                          return const Padding(
-                            padding: EdgeInsets.all(AppStyles.paddingMedium),
-                            child: Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }
-
-                      final record = provider.records[index];
-                      final pk = pkInfo?.first.column;
-                      // Buscar el valor del ID usando Fuzzy por si acaso
-                      final pkValue = pk != null ? _getValueFuzzy(record, pk) : null;
-
-                      // Card para cada registro (diseño móvil)
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: AppStyles.paddingSmall),
-                        elevation: 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                          onTap: () {
-                            if (pkValue != null) {
-                              Navigator.pushNamed(
-                                context,
-                                '/table/${widget.tableName}/edit/$pkValue',
-                              ).then((_) => _loadData());
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppStyles.paddingMedium),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Mostrar todas las columnas excepto el ID y columnas de auditoría
-                                ...columns
-                                    .where((col) {
-                                      final name = col.name.toLowerCase();
-                                      // Excluir columnas de auditoría y el ID principal
-                                      return name != pk?.toLowerCase() &&
-                                          !name.contains('created_at') &&
-                                          !name.contains('updated_at') &&
-                                          !name.contains('deleted_at');
-                                    })
-                                    .take(4) // Mostrar máximo 4 campos para no sobrecargar
-                                    .map((col) {
-                                      // ✅ USAMOS LA FUNCIÓN FUZZY AQUÍ
-                                      final value = _getValueFuzzy(record, col.name);
-                                      
-                                      // Si el valor es null o vacío, no mostrarlo
-                                      if (value == null || value.toString().trim().isEmpty) {
-                                        return const SizedBox.shrink();
-                                      }
-
-                                      return Padding(
-                                        padding: const EdgeInsets.only(bottom: 6),
-                                        child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            SizedBox(
-                                              width: 100,
-                                              child: Text(
-                                                '${col.name}:',
-                                                style: AppStyles.bodySmall.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  color: AppColors.textSecondary,
-                                                ),
-                                              ),
-                                            ),
-                                            Expanded(
-                                              child: Text(
-                                                value.toString(),
-                                                style: AppStyles.bodyMedium,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }),
-
-                                // Botones de acción
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: () {
-                                        if (pkValue != null) {
-                                          Navigator.pushNamed(
-                                            context,
-                                            '/table/${widget.tableName}/edit/$pkValue',
-                                          ).then((_) => _loadData());
-                                        }
-                                      },
-                                      icon: const Icon(AppIcons.edit, size: 18),
-                                      label: const Text('Editar'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: AppColors.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    TextButton.icon(
-                                      onPressed: () => _confirmDelete(record, pk),
-                                      icon: const Icon(AppIcons.delete, size: 18),
-                                      label: const Text('Eliminar'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: AppColors.error,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                // Lista con paginación
+                return Column(
+                  children: [
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () async {
+                          _loadData();
+                        },
+                        child: ListView.builder(
+                          padding: const EdgeInsets.only(
+                            left: AppStyles.paddingMedium,
+                            right: AppStyles.paddingMedium,
+                            top: AppStyles.paddingSmall,
+                            bottom: AppStyles.paddingMedium,
                           ),
+                          itemCount: provider.records.length,
+                          itemBuilder: (context, index) {
+                            final record = provider.records[index];
+                            final pk = pkInfo?.first.column;
+                            // Buscar el valor del ID usando Fuzzy por si acaso
+                            final pkValue = pk != null ? _getValueFuzzy(record, pk) : null;
+
+                                  // Card para cada registro (diseño móvil)
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: AppStyles.paddingSmall),
+                              elevation: 1,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                              ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                                onTap: () {
+                                  if (pkValue != null) {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/table/${widget.tableName}/edit/$pkValue',
+                                    ).then((_) => _loadData());
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(AppStyles.paddingMedium),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                      // Mostrar todas las columnas excepto el ID y columnas de auditoría
+                                      ...columns
+                                          .where((col) {
+                                            final name = col.name.toLowerCase();
+                                            // Excluir columnas de auditoría y el ID principal
+                                            return name != pk?.toLowerCase() &&
+                                                !name.contains('created_at') &&
+                                                !name.contains('updated_at') &&
+                                                !name.contains('deleted_at');
+                                          })
+                                          .take(4) // Mostrar máximo 4 campos para no sobrecargar
+                                          .map((col) {
+                                            // ✅ USAMOS LA FUNCIÓN FUZZY AQUÍ
+                                            final value = _getValueFuzzy(record, col.name);
+
+                                            // Si el valor es null o vacío, no mostrarlo
+                                            if (value == null || value.toString().trim().isEmpty) {
+                                              return const SizedBox.shrink();
+                                            }
+
+                                            return Padding(
+                                              padding: const EdgeInsets.only(bottom: 6),
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  SizedBox(
+                                                    width: 100,
+                                                    child: Text(
+                                                      '${col.name}:',
+                                                      style: AppStyles.bodySmall.copyWith(
+                                                        fontWeight: FontWeight.w600,
+                                                        color: AppColors.textSecondary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    child: Text(
+                                                      value.toString(),
+                                                      style: AppStyles.bodyMedium,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }),
+
+                                      // Botones de acción
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          TextButton.icon(
+                                            onPressed: () {
+                                              if (pkValue != null) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  '/table/${widget.tableName}/edit/$pkValue',
+                                                ).then((_) => _loadData());
+                                              }
+                                            },
+                                            icon: const Icon(AppIcons.edit, size: 18),
+                                            label: const Text('Editar'),
+                                            style: TextButton.styleFrom(
+                                              foregroundColor: AppColors.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          TextButton.icon(
+                                            onPressed: () => _confirmDelete(record, pk),
+                                            icon: const Icon(AppIcons.delete, size: 18),
+                                            label: const Text('Eliminar'),
+                                            style: TextButton.styleFrom(
+                                              foregroundColor: AppColors.error,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    // Controles de paginación
+                    PaginationControls(
+                      currentPage: provider.currentPage,
+                      totalPages: provider.totalPages,
+                      totalRecords: provider.totalRecords,
+                      recordsPerPage: provider.records.length,
+                      pageSize: provider.pageSize,
+                      onPageChanged: _handlePageChanged,
+                      onPageSizeChanged: _handlePageSizeChanged,
+                    ),
+                  ],
                 );
               },
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, '/table/${widget.tableName}/create')
-              .then((_) => _loadData());
-        },
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
-        icon: const Icon(AppIcons.add),
-        label: const Text('Nuevo'),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 140),
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.pushNamed(context, '/table/${widget.tableName}/create')
+                .then((_) => _loadData());
+          },
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          icon: const Icon(AppIcons.add),
+          label: const Text('Nuevo'),
+        ),
       ),
     );
   }
