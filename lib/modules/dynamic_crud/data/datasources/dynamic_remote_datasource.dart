@@ -411,7 +411,7 @@ class DynamicRemoteDataSource {
     }
   }
 
-  Future<Map<String, dynamic>> createTableRecord({
+Future<Map<String, dynamic>> createTableRecord({
     required String databaseName,
     required String tableName,
     required Map<String, dynamic> data,
@@ -427,6 +427,25 @@ class DynamicRemoteDataSource {
       print('📝 Creando registro en: $endpoint');
       print('📦 Datos: $data');
 
+      // --- INICIO DE SOLUCIÓN 3 (PARCHE DE FECHA DINÁMICO) ---
+      // Creamos una copia para no modificar el mapa original 'data'
+      final Map<String, dynamic> optimizedData = Map.from(data);
+      optimizedData.forEach((key, value) {
+        // Detectamos campos de fecha por su nombre o si contienen una 'T' de ISO8601
+        if (key.toLowerCase().contains('visita') || 
+            key.toLowerCase().contains('fecha') || 
+            (value is String && value.contains('T') && value.length > 10)) {
+          if (value is String && !value.endsWith('Z')) {
+            // Limpiamos milisegundos extra y agregamos la Z requerida por Azure
+            optimizedData[key] = value.contains('.') 
+                ? "${value.split('.')[0]}Z" 
+                : "${value}Z";
+            print('📅 Fecha optimizada para Azure: $key -> ${optimizedData[key]}');
+          }
+        }
+      });
+      // --- FIN DE SOLUCIÓN 3 ---
+
       final response = await client.post(
         Uri.parse('${ApiEndpoints.baseUrl}$endpoint'),
         headers: {
@@ -434,29 +453,26 @@ class DynamicRemoteDataSource {
           'Authorization': 'Bearer $token',
           'X-DbName': dbHeaderValue,
         },
-        body: jsonEncode(data),
+        // Enviamos optimizedData en lugar de data original
+        body: jsonEncode(optimizedData),
       ).timeout(_timeout);
 
       print('📡 Status Code: ${response.statusCode}');
       print('📄 Response: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Verificar si la respuesta está vacía o es texto plano
         if (response.body.isEmpty) {
           print('✅ Registro creado (respuesta vacía)');
           return {'success': true, 'message': 'Registro creado exitosamente'};
         }
 
-        // Intentar parsear como JSON
         try {
           final dynamic jsonData = jsonDecode(response.body);
 
-          // Si es un objeto directamente
           if (jsonData is Map<String, dynamic>) {
             return jsonData;
           }
 
-          // Si viene como ApiResponse
           final apiResponse = ApiResponse.fromJson(jsonData as Map<String, dynamic>, null);
           if (apiResponse.success) {
             return apiResponse.data as Map<String, dynamic>;
@@ -464,7 +480,6 @@ class DynamicRemoteDataSource {
             throw Exception(apiResponse.message);
           }
         } catch (e) {
-          // Si falla el parseo JSON, es probable que sea texto plano
           if (e is FormatException) {
             print('✅ Registro creado (respuesta de texto plano): ${response.body}');
             return {'success': true, 'message': response.body};
@@ -472,13 +487,11 @@ class DynamicRemoteDataSource {
           rethrow;
         }
       } else if (response.statusCode == 400) {
-        // Error 400: Probablemente legajo duplicado
         final errorMsg = response.body.isNotEmpty
           ? response.body
           : 'Error de validación. Verifica que el legajo no esté duplicado.';
         throw Exception('Error de validación: $errorMsg');
       } else if (response.statusCode == 500) {
-        // Error 500: Error del servidor
         final errorMsg = response.body.isNotEmpty
           ? response.body
           : 'Error interno del servidor. Verifica:\n1. Que el legajo no esté duplicado\n2. Que todos los campos requeridos estén completos\n3. Que el formato de fecha sea válido';
@@ -656,6 +669,20 @@ class DynamicRemoteDataSource {
           }
           rethrow;
         }
+      } else if (response.statusCode == 500) {
+        // Error del servidor - probablemente violación de foreign key
+        String specificMsg = _getDeleteErrorMessage(tableName);
+
+        final errorMsg = response.body.isNotEmpty
+            ? response.body
+            : specificMsg;
+        throw Exception('Error del servidor: $errorMsg');
+      } else if (response.statusCode == 409) {
+        // Conflicto - registro en uso
+        throw Exception(
+          'No se puede eliminar el registro porque está siendo utilizado por otros datos.\n'
+          'Elimine primero los registros relacionados.'
+        );
       } else {
         throw Exception('Failed to delete record: ${response.statusCode} - ${response.body}');
       }
@@ -880,5 +907,65 @@ class DynamicRemoteDataSource {
       'records': paginatedRecords,
       'totalRecords': totalRecords,
     };
+  }
+
+  /// Genera un mensaje de error específico según la tabla que se intenta eliminar
+  String _getDeleteErrorMessage(String tableName) {
+    final lowerTable = tableName.toLowerCase();
+
+    // Mensajes específicos por tabla
+    final Map<String, String> tableMessages = {
+      'categorias': 'No se puede eliminar esta categoría porque tiene productos asociados.\n\n'
+          '💡 Solución:\n'
+          '1. Primero cambie los productos a otra categoría, o\n'
+          '2. Elimine los productos de esta categoría\n'
+          '3. Luego intente eliminar la categoría nuevamente',
+
+      'medicos': 'No se puede eliminar este médico porque tiene citas registradas.\n\n'
+          '💡 Solución:\n'
+          '1. Primero elimine o reasigne las citas del médico, o\n'
+          '2. Considere marcarlo como "Inactivo" en lugar de eliminarlo',
+
+      'pacientes': 'No se puede eliminar este paciente porque tiene citas o historiales médicos.\n\n'
+          '💡 Solución:\n'
+          '1. Primero elimine las citas y registros del paciente, o\n'
+          '2. Considere marcarlo como "Inactivo" en lugar de eliminarlo',
+
+      'proveedores': 'No se puede eliminar este proveedor porque tiene productos asociados.\n\n'
+          '💡 Solución:\n'
+          '1. Primero cambie los productos a otro proveedor, o\n'
+          '2. Elimine los productos de este proveedor\n'
+          '3. Luego intente eliminar el proveedor',
+
+      'cursos': 'No se puede eliminar este curso porque tiene estudiantes inscritos.\n\n'
+          '💡 Solución:\n'
+          '1. Primero elimine las inscripciones del curso, o\n'
+          '2. Considere marcarlo como "Inactivo"',
+
+      'profesores': 'No se puede eliminar este profesor porque tiene cursos asignados.\n\n'
+          '💡 Solución:\n'
+          '1. Primero reasigne los cursos a otro profesor, o\n'
+          '2. Considere marcarlo como "Inactivo"',
+
+      'citas': 'No se puede eliminar esta cita porque tiene historiales clínicos asociados.\n\n'
+          '💡 Solución:\n'
+          '1. Primero elimine los historiales clínicos de esta cita, o\n'
+          '2. Contacte al administrador del sistema',
+    };
+
+    // Buscar mensaje específico
+    for (var entry in tableMessages.entries) {
+      if (lowerTable.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+
+    // Mensaje genérico si no se encuentra la tabla
+    return 'No se puede eliminar el registro porque tiene datos relacionados en otras tablas.\n\n'
+        '💡 Solución:\n'
+        '1. Primero elimine o reasigne los registros relacionados\n'
+        '2. Luego intente eliminar este registro nuevamente\n'
+        '3. O considere marcarlo como "Inactivo" en lugar de eliminarlo\n\n'
+        '📞 Si el problema persiste, contacte al administrador del sistema.';
   }
 }

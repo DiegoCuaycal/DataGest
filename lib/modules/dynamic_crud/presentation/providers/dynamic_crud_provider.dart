@@ -139,7 +139,7 @@ class DynamicCrudProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _cleanErrorMessage(e.toString());
       _isLoading = false;
       notifyListeners();
     }
@@ -180,7 +180,7 @@ class DynamicCrudProvider extends ChangeNotifier {
       _isLoadingMore = false;
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _cleanErrorMessage(e.toString());
       _isLoadingMore = false;
       _currentPage--; // Revertir el incremento en caso de error
       notifyListeners();
@@ -208,7 +208,7 @@ class DynamicCrudProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _cleanErrorMessage(e.toString());
       _isLoading = false;
       notifyListeners();
     }
@@ -237,7 +237,7 @@ class DynamicCrudProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _cleanErrorMessage(e.toString());
       _isLoading = false;
       notifyListeners();
     }
@@ -264,7 +264,7 @@ class DynamicCrudProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _cleanErrorMessage(e.toString());
       _isLoading = false;
       notifyListeners();
       return false;
@@ -294,11 +294,26 @@ class DynamicCrudProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _cleanErrorMessage(e.toString());
       _isLoading = false;
       notifyListeners();
       return false;
     }
+  }
+
+  /// Limpia mensajes de error técnicos para mostrar solo información útil al usuario
+  String _cleanErrorMessage(String errorMessage) {
+    // Remover prefijos técnicos como "Exception:", "Repository error:", etc.
+    String cleaned = errorMessage
+        .replaceAll('Exception: Repository error: Exception: ', '')
+        .replaceAll('Exception: Error deleting record: Exception: ', '')
+        .replaceAll('Exception: ', '')
+        .replaceAll('Repository error: ', '')
+        .replaceAll('Error deleting record: ', '')
+        .replaceAll('Error del servidor: ', '')
+        .trim();
+
+    return cleaned;
   }
 
   Future<bool> deleteRecord({
@@ -322,7 +337,8 @@ class DynamicCrudProvider extends ChangeNotifier {
       notifyListeners();
       return result;
     } catch (e) {
-      _errorMessage = e.toString();
+      // Limpiar mensaje de error antes de mostrarlo al usuario
+      _errorMessage = _cleanErrorMessage(e.toString());
       _isLoading = false;
       notifyListeners();
       return false;
@@ -344,7 +360,7 @@ class DynamicCrudProvider extends ChangeNotifier {
         useMock: _useMock,
       );
     } catch (e) {
-      throw Exception('Error loading dropdown data: $e');
+      throw Exception(_cleanErrorMessage(e.toString()));
     }
   }
 

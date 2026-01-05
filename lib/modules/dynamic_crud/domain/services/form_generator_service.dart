@@ -6,11 +6,96 @@ import '../../../../shared/widgets/dynamic_fields/dynamic_number_field.dart';
 import '../../../../shared/widgets/dynamic_fields/dynamic_date_picker.dart';
 import '../../../../shared/widgets/dynamic_fields/dynamic_checkbox.dart';
 import '../../../../shared/widgets/dynamic_fields/dynamic_readonly_field.dart';
+import '../../../../shared/widgets/dynamic_fields/dynamic_dropdown.dart';
 import '../../presentation/widgets/foreign_key_dropdown.dart';
 import '../../../../core/network/column_name_mapper.dart';
 import 'field_type_mapper.dart';
 
 class FormGeneratorService {
+  /// Genera un hint descriptivo basado en el nombre del campo
+  String _generateHintForField(String columnName, String dataType) {
+    final lowerName = columnName.toLowerCase();
+
+    // Hints específicos para campos comunes
+    if (lowerName.contains('codigo') || lowerName.contains('sku')) {
+      return 'Ingrese código alfanumérico (ej: ABC123)';
+    }
+    if (lowerName.contains('nombre')) {
+      return 'Ingrese nombre completo';
+    }
+    if (lowerName.contains('email') || lowerName.contains('correo')) {
+      return 'Ingrese email válido (ej: usuario@ejemplo.com)';
+    }
+    if (lowerName.contains('telefono') || lowerName.contains('celular')) {
+      return 'Ingrese número telefónico (ej: 0981234567)';
+    }
+    if (lowerName.contains('cedula') || lowerName.contains('dni') || lowerName.contains('legajo')) {
+      return 'Ingrese número de documento';
+    }
+    if (lowerName.contains('direccion')) {
+      return 'Ingrese dirección completa';
+    }
+    if (lowerName.contains('descripcion')) {
+      return 'Ingrese descripción detallada';
+    }
+    if (lowerName.contains('precio') || lowerName.contains('costo') || lowerName.contains('venta')) {
+      return 'Ingrese precio (ej: 15000.50)';
+    }
+    if (lowerName.contains('stock') || lowerName.contains('cantidad')) {
+      return 'Ingrese cantidad numérica';
+    }
+    if (lowerName.contains('calificacion') || lowerName.contains('nota')) {
+      return 'Ingrese calificación numérica';
+    }
+    if (lowerName.contains('edad')) {
+      return 'Ingrese edad en años';
+    }
+    if (lowerName.contains('especificacion')) {
+      return 'Ingrese especificaciones técnicas';
+    }
+    if (lowerName.contains('motivo')) {
+      return 'Ingrese motivo o razón';
+    }
+    if (lowerName.contains('tratamiento')) {
+      return 'Ingrese detalles del tratamiento';
+    }
+    if (lowerName.contains('diagnostico')) {
+      return 'Ingrese diagnóstico médico';
+    }
+    if (lowerName.contains('especialidad')) {
+      return 'Ingrese área de especialidad';
+    }
+    if (lowerName.contains('consultorio')) {
+      return 'Ingrese número o nombre del consultorio';
+    }
+    if (lowerName.contains('licencia')) {
+      return 'Ingrese número de licencia profesional';
+    }
+    if (lowerName.contains('ubicacion') || lowerName.contains('almacen')) {
+      return 'Ingrese ubicación o almacén';
+    }
+    if (lowerName.contains('genero')) {
+      return 'Ingrese género (M/F/Otro)';
+    }
+    if (lowerName.contains('grupo') && lowerName.contains('sanguineo')) {
+      return 'Ingrese grupo sanguíneo (ej: O+, A-, AB+)';
+    }
+    if (lowerName.contains('apellido')) {
+      return 'Ingrese apellido(s) completo(s)';
+    }
+
+    // Hints por tipo de dato
+    if (dataType.toLowerCase().contains('int') || dataType.toLowerCase().contains('number')) {
+      return 'Ingrese número entero';
+    }
+    if (dataType.toLowerCase().contains('decimal') || dataType.toLowerCase().contains('float')) {
+      return 'Ingrese número decimal';
+    }
+
+    // Hint genérico
+    return 'Ingrese texto';
+  }
+
   Widget generateField({
     required ColumnInfoModel column,
     required DatabaseMetadataModel metadata,
@@ -76,7 +161,45 @@ class FormGeneratorService {
       );
     }
 
-    // 5. Data Types logic
+    // 5. Predefined dropdown fields (estado, genero, etc.)
+    final lowerName = column.name.toLowerCase();
+
+    // Campo "estado" -> Activo/Inactivo
+    if (lowerName == 'estado') {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: DynamicDropdown(
+          label: column.name,
+          items: [
+            DropdownMenuItem(value: 'Activo', child: Text('Activo')),
+            DropdownMenuItem(value: 'Inactivo', child: Text('Inactivo')),
+          ],
+          value: initialValue?.toString() ?? 'Activo',
+          onChanged: (value) => onChanged(column.name, value),
+          isRequired: true,
+        ),
+      );
+    }
+
+    // Campo "genero" -> Masculino/Femenino/Otro
+    if (lowerName == 'genero') {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: DynamicDropdown(
+          label: column.name,
+          items: [
+            DropdownMenuItem(value: 'M', child: Text('Masculino')),
+            DropdownMenuItem(value: 'F', child: Text('Femenino')),
+            DropdownMenuItem(value: 'Otro', child: Text('Otro')),
+          ],
+          value: initialValue?.toString(),
+          onChanged: (value) => onChanged(column.name, value),
+          isRequired: true,
+        ),
+      );
+    }
+
+    // 6. Data Types logic
     final type = column.type.toLowerCase();
 
     if (FieldTypeMapper.isStringType(type) || FieldTypeMapper.isTextType(type)) {
@@ -89,6 +212,7 @@ class FormGeneratorService {
           initialValue: initialValue?.toString(),
           onChanged: (value) => onChanged(column.name, value),
           multiline: FieldTypeMapper.isTextType(type),
+          hintText: _generateHintForField(column.name, type),
         ),
       );
     }
@@ -102,6 +226,7 @@ class FormGeneratorService {
           isRequired: true, //  SIEMPRE obligatorio
           initialValue: initialValue?.toString(),
           onChanged: (value) => onChanged(column.name, value),
+          hintText: _generateHintForField(column.name, type),
         ),
       );
     }
@@ -115,6 +240,7 @@ class FormGeneratorService {
           isRequired: true, //  SIEMPRE obligatorio
           initialValue: initialValue?.toString(),
           onChanged: (value) => onChanged(column.name, value),
+          hintText: _generateHintForField(column.name, type),
         ),
       );
     }
@@ -151,6 +277,7 @@ class FormGeneratorService {
         isRequired: true, //  SIEMPRE obligatorio
         initialValue: initialValue?.toString(),
         onChanged: (value) => onChanged(column.name, value),
+        hintText: _generateHintForField(column.name, type),
       ),
     );
   }
@@ -248,10 +375,10 @@ class FormGeneratorService {
     return camel[0].toUpperCase() + camel.substring(1);
   }
 /// TRADUCTOR PARA ESCRITURA (Hacia el Backend)
-String _toBackendCase(String str, String tableName) { 
+String _toBackendCase(String str, String tableName) {
   final String lowerStr = str.toLowerCase();
 
-  // 🚨 REGLA PARA PROFESORES CORREGIDA
+  // 1. 🚨 REGLA PARA PROFESORES (Sin cambios)
   if (tableName.toLowerCase() == 'profesores') {
     if (lowerStr == 'usuario_id') return 'usuarioId';
     if (lowerStr == 'email') return 'email';
@@ -259,63 +386,82 @@ String _toBackendCase(String str, String tableName) {
     if (lowerStr == 'especialidad') return 'especialidad';
   }
 
+  // 2. CAMPOS SIMPLES (Sin cambios)
   if (lowerStr == 'id') return 'id';
   if (lowerStr == 'nombres' || lowerStr == 'nombre') return lowerStr;
-    if (lowerStr == 'apellidos') return 'apellidos';
-    if (lowerStr == 'activo') return 'activo';
-    if (lowerStr == 'sku') return 'sku'; 
-    if (lowerStr == 'descripcion') return 'descripcion'; 
-    if (lowerStr == 'estado') return 'estado'; 
-    if (lowerStr == 'especificaciones') return 'especificaciones'; 
+  if (lowerStr == 'apellidos') return 'apellidos';
+  if (lowerStr == 'activo') return 'activo';
+  if (lowerStr == 'sku') return 'sku';
+  if (lowerStr == 'descripcion') return 'descripcion';
+  if (lowerStr == 'estado') return 'estado';
+  if (lowerStr == 'especificaciones') return 'especificaciones';
+  if (lowerStr == 'cedula' || lowerStr == 'legajo') return 'cedula';
+  if (lowerStr == 'dni') return 'dni';
+
+  // 3.  REGLAS ESTRICTAS PARA SWAGGER (Actualizado con campos faltantes)
+  // Se agregaron campos de Citas y Pacientes para evitar el Error 500
+  final columnasPascalGuionStrict = [
+    'cita_id', 'descripcion_diagnostico', 'tratamiento_recetado', 'proxima_visita',
+    'producto_id', 'stock_actual', 'stock_minimo', 'ubicacion_almacen',
+    'estudiante_id', 'curso_id', 'fecha_inscripcion', 'padre_id',
+    'paciente_id', 'medico_id', 'fecha_hora', 'motivo_consulta',
+    'fecha_nacimiento', 'grupo_sanguineo', 'numero_licencia', 'created_at'
+  ];
+
+  if (columnasPascalGuionStrict.contains(lowerStr)) {
+    // Mapeo exacto 1 a 1 según Swagger: minúscula_Mayúscula
+    if (lowerStr == 'cita_id') return 'cita_Id';
+    if (lowerStr == 'descripcion_diagnostico') return 'descripcion_Diagnostico';
+    if (lowerStr == 'tratamiento_recetado') return 'tratamiento_Recetado';
+    if (lowerStr == 'proxima_visita') return 'proxima_Visita';
+    if (lowerStr == 'producto_id') return 'producto_Id';
+    if (lowerStr == 'stock_actual') return 'stock_Actual';
+    if (lowerStr == 'stock_minimo') return 'stock_Minimo';
+    if (lowerStr == 'ubicacion_almacen') return 'ubicacion_Almacen';
+    if (lowerStr == 'estudiante_id') return 'estudiante_Id';
+    if (lowerStr == 'curso_id') return 'curso_Id';
+    if (lowerStr == 'fecha_inscripcion') return 'fecha_Inscripcion';
+    if (lowerStr == 'padre_id') return 'padre_Id';
     
-    if (lowerStr == 'cedula' || lowerStr == 'legajo') return 'cedula';
-    if (lowerStr == 'dni') return 'dni';
-
-    final productosPascalGuion = [
-      'precio_costo', 'precio_venta', 'categoria_id', 'proveedor_id'
-    ];
-
-    if (productosPascalGuion.contains(lowerStr)) {
-      return str.split('_').map((part) {
-        if (part.isEmpty) return '';
-        return part[0].toUpperCase() + part.substring(1);
-      }).join('_');
-    }
-
-    if (lowerStr == 'usuario_id') return 'usuario_Id';
+    // Nuevos campos añadidos para Salud y Pacientes
+    if (lowerStr == 'paciente_id') return 'paciente_Id';
+    if (lowerStr == 'medico_id') return 'medico_Id';
+    if (lowerStr == 'fecha_hora') return 'fecha_Hora';
+    if (lowerStr == 'motivo_consulta') return 'motivo_Consulta';
     if (lowerStr == 'fecha_nacimiento') return 'fecha_Nacimiento';
-    if (lowerStr == 'created_at') return 'created_At';
-
-    if (lowerStr == 'genero') return 'genero';
-    if (lowerStr == 'direccion') return 'direccion';
-    if (lowerStr == 'telefono') return 'telefono';
     if (lowerStr == 'grupo_sanguineo') return 'grupo_Sanguineo';
-    if (lowerStr == 'especialidad') return 'especialidad';
-    if (lowerStr == 'consultorio') return 'consultorio';
     if (lowerStr == 'numero_licencia') return 'numero_Licencia';
-
-    if (lowerStr == 'calificacion') return 'calificacion';
-
-    final columnasInventarioGuion = [
-      'estudiante_id', 'curso_id', 'fecha_inscripcion', 
-      'cita_id', 'descripcion_diagnostico', 'tratamiento_recetado', 'proxima_visita',
-      'producto_id', 'stock_actual', 'stock_minimo', 'ubicacion_almacen',
-      'padre_id'
-    ];
-
-    if (columnasInventarioGuion.contains(lowerStr)) {
-      return str.split('_').map((part) {
-        if (part.isEmpty) return '';
-        return part[0].toUpperCase() + part.substring(1);
-      }).join('_');
-    }
-
-    final columnasSaludStrict = ['paciente_id', 'medico_id', 'fecha_hora', 'motivo_consulta'];
-    if (columnasSaludStrict.contains(lowerStr)) return lowerStr;
-
-    // Regla General: PascalCase simple
-    return _toPascalCase(str);
+    if (lowerStr == 'created_at') return 'created_At';
   }
+
+  // 4. PRODUCTOS (Pascal_Guion: Precio_Costo) - Sin cambios
+  final productosPascalGuion = [
+    'precio_costo', 'precio_venta', 'categoria_id', 'proveedor_id'
+  ];
+
+  if (productosPascalGuion.contains(lowerStr)) {
+    return str.split('_').map((part) {
+      if (part.isEmpty) return '';
+      return part[0].toUpperCase() + part.substring(1);
+    }).join('_');
+  }
+
+  // 5. CAMPOS ESPECÍFICOS (Sin cambios)
+  if (lowerStr == 'usuario_id') return 'usuario_Id';
+  if (lowerStr == 'genero') return 'genero';
+  if (lowerStr == 'direccion') return 'direccion';
+  if (lowerStr == 'telefono') return 'telefono';
+  if (lowerStr == 'especialidad') return 'especialidad';
+  if (lowerStr == 'consultorio') return 'consultorio';
+  if (lowerStr == 'calificacion') return 'calificacion';
+
+  // 6. SALUD CAMPOS SIMPLES (Sin cambios)
+  final columnasSaludStrict = ['paciente_id', 'medico_id', 'fecha_hora', 'motivo_consulta'];
+  if (columnasSaludStrict.contains(lowerStr)) return lowerStr;
+
+  // 7. REGLA GENERAL: PascalCase simple
+  return _toPascalCase(str);
+}
 
 Map<String, dynamic> prepareDataForSubmit({
     required Map<String, dynamic> formData,
@@ -329,7 +475,7 @@ Map<String, dynamic> prepareDataForSubmit({
 
     print('🔍 Preparando datos para enviar:');
 
-    preparedData['Id'] = isEditing ? existingId : 0;
+    preparedData['id'] = isEditing ? existingId : 0;
     
     for (var entry in formData.entries) {
       ColumnInfoModel? column = columns.where((col) => col.name == entry.key).firstOrNull;

@@ -10,6 +10,7 @@ class DynamicTextField extends StatelessWidget {
   final Function(String) onChanged;
   final bool multiline;
   final TextEditingController? controller;
+  final String? hintText;
 
   const DynamicTextField({
     super.key,
@@ -20,10 +21,21 @@ class DynamicTextField extends StatelessWidget {
     required this.onChanged,
     this.multiline = false,
     this.controller,
+    this.hintText,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Generar el helper text combinando información
+    String? helperText;
+    if (isRequired && hintText != null) {
+      helperText = 'Campo obligatorio - $hintText';
+    } else if (isRequired) {
+      helperText = 'Campo obligatorio - Ingrese texto';
+    } else if (hintText != null) {
+      helperText = hintText;
+    }
+
     return TextFormField(
       controller: controller,
       initialValue: controller == null ? initialValue : null,
@@ -31,7 +43,7 @@ class DynamicTextField extends StatelessWidget {
         labelText: '$label${isRequired ? ' *' : ''}',
       ).copyWith(
         counterText: maxLength != null ? '' : null,
-        helperText: isRequired ? 'Campo obligatorio' : null,
+        helperText: helperText,
         helperStyle: const TextStyle(fontSize: 11, color: Colors.grey),
       ),
       maxLength: maxLength,

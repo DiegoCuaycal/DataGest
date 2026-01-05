@@ -10,6 +10,7 @@ class DynamicNumberField extends StatelessWidget {
   final dynamic initialValue;
   final Function(dynamic) onChanged;
   final TextEditingController? controller;
+  final String? hintText;
 
   const DynamicNumberField({
     super.key,
@@ -19,19 +20,32 @@ class DynamicNumberField extends StatelessWidget {
     this.initialValue,
     required this.onChanged,
     this.controller,
+    this.hintText,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Generar el helper text combinando información
+    String defaultHint = allowDecimal
+        ? 'Ingrese número decimal (ej: 10.5)'
+        : 'Ingrese número entero (ej: 42)';
+
+    String finalHint = hintText ?? defaultHint;
+
+    String? helperText;
+    if (isRequired) {
+      helperText = 'Campo obligatorio - $finalHint';
+    } else {
+      helperText = finalHint;
+    }
+
     return TextFormField(
       controller: controller,
       initialValue: controller == null ? initialValue?.toString() : null,
       decoration: AppStyles.inputDecoration(
         labelText: '$label${isRequired ? ' *' : ''}',
       ).copyWith(
-        helperText: isRequired
-            ? 'Campo obligatorio - ${allowDecimal ? 'Número decimal' : 'Número entero'}'
-            : allowDecimal ? 'Número decimal' : 'Número entero',
+        helperText: helperText,
         helperStyle: const TextStyle(fontSize: 11, color: Colors.grey),
       ),
       keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
