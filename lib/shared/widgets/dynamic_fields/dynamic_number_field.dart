@@ -27,12 +27,17 @@ class DynamicNumberField extends StatelessWidget {
       controller: controller,
       initialValue: controller == null ? initialValue?.toString() : null,
       decoration: AppStyles.inputDecoration(
-        labelText: label,
+        labelText: '$label${isRequired ? ' *' : ''}',
+      ).copyWith(
+        helperText: isRequired
+            ? 'Campo obligatorio - ${allowDecimal ? 'Número decimal' : 'Número entero'}'
+            : allowDecimal ? 'Número decimal' : 'Número entero',
+        helperStyle: const TextStyle(fontSize: 11, color: Colors.grey),
       ),
       keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
       inputFormatters: [
         if (!allowDecimal) FilteringTextInputFormatter.digitsOnly,
-        if (allowDecimal) FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+        if (allowDecimal) FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
       ],
       onChanged: (value) {
         if (value.isEmpty) {
@@ -46,22 +51,44 @@ class DynamicNumberField extends StatelessWidget {
         }
       },
       validator: (value) {
-        if (isRequired && (value == null || value.isEmpty)) {
-          return AppStrings.requiredFieldMessage;
+        // Validar campo requerido
+        if (isRequired) {
+          if (value == null || value.trim().isEmpty) {
+            return '${AppStrings.requiredFieldMessage} - El campo $label no puede estar vacío';
+          }
         }
+
+        // Validar formato numérico
         if (value != null && value.isNotEmpty) {
           if (allowDecimal) {
-            if (double.tryParse(value) == null) {
-              return 'Debe ser un número válido';
+            final parsedValue = double.tryParse(value);
+            if (parsedValue == null) {
+              return 'Debe ser un número decimal válido (ej: 10.5)';
+            }
+            // Validar rangos razonables
+            if (parsedValue.abs() > 999999999) {
+              return 'El número es demasiado grande';
             }
           } else {
-            if (int.tryParse(value) == null) {
-              return 'Debe ser un número entero';
+            final parsedValue = int.tryParse(value);
+            if (parsedValue == null) {
+              return 'Debe ser un número entero válido (ej: 42)';
+            }
+            // Validar rangos razonables
+            if (parsedValue.abs() > 2147483647) {
+              return 'El número es demasiado grande';
             }
           }
         }
+
+        // Si no es requerido y está vacío, es válido
+        if (!isRequired && (value == null || value.trim().isEmpty)) {
+          return null;
+        }
+
         return null;
       },
+      autovalidateMode: AutovalidateMode.onUserInteraction,
     );
   }
 }

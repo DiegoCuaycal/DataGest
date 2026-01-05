@@ -145,8 +145,12 @@ class _DynamicDatePickerState extends State<DynamicDatePicker> {
     return TextFormField(
       controller: _controller,
       decoration: AppStyles.inputDecoration(
-        labelText: widget.label,
+        labelText: '${widget.label}${widget.isRequired ? ' *' : ''}',
       ).copyWith(
+        helperText: widget.isRequired
+            ? 'Campo obligatorio - Selecciona una fecha'
+            : 'Selecciona una fecha',
+        helperStyle: const TextStyle(fontSize: 11, color: Colors.grey),
         suffixIcon: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -178,11 +182,17 @@ class _DynamicDatePickerState extends State<DynamicDatePicker> {
       readOnly: true,
       onTap: () => _selectDate(context),
       validator: (value) {
-        if (widget.isRequired && (value == null || value.isEmpty)) {
-          return AppStrings.requiredFieldMessage;
+        if (widget.isRequired) {
+          if (value == null || value.isEmpty) {
+            return '${AppStrings.requiredFieldMessage} - Debe seleccionar una fecha para ${widget.label}';
+          }
+          if (_selectedDate == null) {
+            return 'Por favor selecciona una fecha válida';
+          }
         }
         return null;
       },
+      autovalidateMode: AutovalidateMode.onUserInteraction,
     );
   }
 }

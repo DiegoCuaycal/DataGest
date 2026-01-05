@@ -189,14 +189,21 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
     }
 
     return DropdownButtonFormField<dynamic>(
-      decoration: AppStyles.inputDecoration(labelText: widget.label),
+      decoration: AppStyles.inputDecoration(
+        labelText: '${widget.label}${widget.isRequired ? ' *' : ''}',
+      ).copyWith(
+        helperText: widget.isRequired
+            ? 'Campo obligatorio - Selecciona una opción'
+            : 'Selecciona una opción',
+        helperStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+      ),
       value: _selectedValue,
-      isExpanded: true, // Esto ayuda a textos largos
+      isExpanded: true,
       items: _items.map((item) {
         return DropdownMenuItem<dynamic>(
           value: item.id,
           child: Text(
-            item.displayValue, 
+            item.displayValue,
             style: AppStyles.bodyMedium,
             overflow: TextOverflow.ellipsis,
           ),
@@ -208,9 +215,15 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
         });
         widget.onChanged(value);
       },
-      validator: widget.isRequired
-          ? (value) => value == null ? AppStrings.requiredFieldMessage : null
-          : null,
+      validator: (value) {
+        if (widget.isRequired) {
+          if (value == null) {
+            return '${AppStrings.requiredFieldMessage} - Debe seleccionar una opción en ${widget.label}';
+          }
+        }
+        return null;
+      },
+      autovalidateMode: AutovalidateMode.onUserInteraction,
     );
   }
 }

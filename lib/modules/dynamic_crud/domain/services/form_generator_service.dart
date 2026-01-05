@@ -69,7 +69,7 @@ class FormGeneratorService {
           databaseName: currentDatabase,
           referenceTable: fk.referenceTable,
           referenceColumn: fk.referenceColumn,
-          isRequired: !column.nullable,
+          isRequired: true, // SIEMPRE obligatorio
           initialValue: initialValue,
           onChanged: (value) => onChanged(column.name, value),
         ),
@@ -85,7 +85,7 @@ class FormGeneratorService {
         child: DynamicTextField(
           label: column.name,
           maxLength: column.maxLength,
-          isRequired: !column.nullable,
+          isRequired: true, //  SIEMPRE obligatorio
           initialValue: initialValue?.toString(),
           onChanged: (value) => onChanged(column.name, value),
           multiline: FieldTypeMapper.isTextType(type),
@@ -99,8 +99,8 @@ class FormGeneratorService {
         child: DynamicNumberField(
           label: column.name,
           allowDecimal: false,
-          isRequired: !column.nullable,
-          initialValue: initialValue?.toString(), // ✅ Importante: toString()
+          isRequired: true, //  SIEMPRE obligatorio
+          initialValue: initialValue?.toString(),
           onChanged: (value) => onChanged(column.name, value),
         ),
       );
@@ -112,8 +112,8 @@ class FormGeneratorService {
         child: DynamicNumberField(
           label: column.name,
           allowDecimal: true,
-          isRequired: !column.nullable,
-          initialValue: initialValue?.toString(), // ✅ Importante: toString()
+          isRequired: true, //  SIEMPRE obligatorio
+          initialValue: initialValue?.toString(),
           onChanged: (value) => onChanged(column.name, value),
         ),
       );
@@ -125,7 +125,7 @@ class FormGeneratorService {
         child: DynamicDatePicker(
           label: column.name,
           includeTime: type.contains('time') && type != 'time',
-          isRequired: !column.nullable,
+          isRequired: true, //  SIEMPRE obligatorio
           initialValue: initialValue,
           onChanged: (value) => onChanged(column.name, value),
         ),
@@ -148,7 +148,7 @@ class FormGeneratorService {
       padding: const EdgeInsets.only(bottom: 16),
       child: DynamicTextField(
         label: column.name,
-        isRequired: !column.nullable,
+        isRequired: true, //  SIEMPRE obligatorio
         initialValue: initialValue?.toString(),
         onChanged: (value) => onChanged(column.name, value),
       ),

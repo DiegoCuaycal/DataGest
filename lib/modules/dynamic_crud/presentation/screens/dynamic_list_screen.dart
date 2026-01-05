@@ -96,7 +96,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
 
     // 2. Intento Fuzzy (limpiando guiones y case)
     final cleanCol = columnName.replaceAll('_', '').toLowerCase();
-    
+
     for (var key in record.keys) {
       final cleanKey = key.replaceAll('_', '').toLowerCase();
       if (cleanKey == cleanCol) {
@@ -104,6 +104,73 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
       }
     }
     return null;
+  }
+
+  /// FUNCIÓN PARA MOSTRAR INFORMACIÓN DESCRIPTIVA DE FOREIGN KEYS
+  /// En lugar de mostrar "paciente_id: 1", muestra "Paciente: Juan Pérez"
+  String _getDisplayValue(Map<String, dynamic> record, String columnName) {
+    final value = _getValueFuzzy(record, columnName);
+
+    // Si es null o vacío, retornar cadena vacía
+    if (value == null || value.toString().trim().isEmpty) {
+      return '';
+    }
+
+    // Detectar si es una llave foránea (termina en _id)
+    final lowerColumnName = columnName.toLowerCase();
+    if (lowerColumnName.endsWith('_id')) {
+      // Buscar el campo descriptivo relacionado en el registro
+      // El backend puede enviar campos anidados o con prefijos
+      final baseName = lowerColumnName.replaceAll('_id', '');
+
+      // Intentar encontrar información descriptiva en el record
+      // Buscar patrones comunes que el backend puede enviar
+      final possibleFields = [
+        // Patrones directos
+        '${baseName}_nombre',
+        '${baseName}_nombres',
+        '${baseName}Nombre',
+        '${baseName}Nombres',
+        '${baseName}nombre',
+        '${baseName}nombres',
+        // Patrones con objeto anidado
+        '${baseName}nombre',
+        '${baseName}Nombre',
+        // Patrones inversos
+        'nombre_$baseName',
+        'nombres_$baseName',
+        'Nombre_$baseName',
+        'Nombres_$baseName',
+        // Para médicos específicamente
+        '${baseName}_especialidad',
+        '${baseName}Especialidad',
+        // Para cursos
+        '${baseName}_descripcion',
+        '${baseName}Descripcion',
+      ];
+
+      for (var field in possibleFields) {
+        final descriptiveValue = _getValueFuzzy(record, field);
+        if (descriptiveValue != null &&
+            descriptiveValue.toString().trim().isNotEmpty &&
+            descriptiveValue.toString() != '0' &&
+            descriptiveValue.toString() != 'null') {
+          // Capitalizar y limpiar el nombre del campo (paciente_id -> Paciente)
+          String displayName = baseName.replaceAll('_', ' ');
+          displayName = displayName[0].toUpperCase() + displayName.substring(1);
+          return '$displayName: $descriptiveValue';
+        }
+      }
+
+      // Si no encontró campo descriptivo, mostrar el ID con su label
+      // Esto asegura que el campo siempre se muestre, aunque sea solo el ID
+      String displayName = baseName.replaceAll('_', ' ');
+      displayName = displayName[0].toUpperCase() + displayName.substring(1);
+      return '$displayName: $value';
+    }
+
+    // Para campos normales, retornar el valor tal cual
+    return value.toString();
   }
 
   @override
@@ -304,17 +371,8 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                               ),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                                onTap: () {
-                                  if (pkValue != null) {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/table/${widget.tableName}/edit/$pkValue',
-                                    ).then((_) => _loadData());
-                                  }
-                                },
-                                child: Padding(
+                              // ✅ REMOVIDO onTap - La tarjeta es solo visual
+                              child: Padding(
                                   padding: const EdgeInsets.all(AppStyles.paddingMedium),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,14 +389,45 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                                           })
                                           .take(4) // Mostrar máximo 4 campos para no sobrecargar
                                           .map((col) {
-                                            // ✅ USAMOS LA FUNCIÓN FUZZY AQUÍ
-                                            final value = _getValueFuzzy(record, col.name);
+                                            //  USAMOS LA FUNCIÓN DE DISPLAY PARA MOSTRAR INFO DESCRIPTIVA
+                                            final displayValue = _getDisplayValue(record, col.name);
 
-                                            // Si el valor es null o vacío, no mostrarlo
-                                            if (value == null || value.toString().trim().isEmpty) {
+                                            // Si el valor está vacío, no mostrarlo
+                                            if (displayValue.isEmpty) {
                                               return const SizedBox.shrink();
                                             }
 
+                                            // Detectar si es una FK (foreign key) para mejorar el formato
+                                            final isForeignKey = col.name.toLowerCase().endsWith('_id');
+
+                                            // Si es FK y ya incluye el label (ej: "Paciente: Juan"), mostrar solo el valor
+                                            if (isForeignKey && displayValue.contains(':')) {
+                                              return Padding(
+                                                padding: const EdgeInsets.only(bottom: 6),
+                                                child: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.link,
+                                                      size: 16,
+                                                      color: AppColors.primary,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        displayValue,
+                                                        style: AppStyles.bodyMedium.copyWith(
+                                                          color: AppColors.primary,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }
+
+                                            // Para campos normales, mostrar con el formato tradicional
                                             return Padding(
                                               padding: const EdgeInsets.only(bottom: 6),
                                               child: Row(
@@ -356,7 +445,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                                                   ),
                                                   Expanded(
                                                     child: Text(
-                                                      value.toString(),
+                                                      displayValue,
                                                       style: AppStyles.bodyMedium,
                                                     ),
                                                   ),
@@ -399,7 +488,6 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                                     ],
                                   ),
                                 ),
-                              ),
                             );
                           },
                         ),

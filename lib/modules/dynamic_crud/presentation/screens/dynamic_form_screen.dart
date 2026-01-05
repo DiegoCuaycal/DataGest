@@ -94,7 +94,52 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   }
 
   Future<void> _saveRecord() async {
+    // Validar el formulario
     if (!_formKey.currentState!.validate()) {
+      // Mostrar mensaje de error si hay campos inválidos
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Por favor, completa todos los campos requeridos correctamente',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Validar que haya al menos un campo con datos (además del ID)
+    if (_formData.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Debes llenar al menos un campo antes de guardar',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
       return;
     }
 

@@ -28,22 +28,36 @@ class DynamicTextField extends StatelessWidget {
       controller: controller,
       initialValue: controller == null ? initialValue : null,
       decoration: AppStyles.inputDecoration(
-        labelText: label,
+        labelText: '$label${isRequired ? ' *' : ''}',
       ).copyWith(
         counterText: maxLength != null ? '' : null,
+        helperText: isRequired ? 'Campo obligatorio' : null,
+        helperStyle: const TextStyle(fontSize: 11, color: Colors.grey),
       ),
       maxLength: maxLength,
       maxLines: multiline ? 5 : 1,
       onChanged: onChanged,
       validator: (value) {
-        if (isRequired && (value == null || value.isEmpty)) {
-          return AppStrings.requiredFieldMessage;
+        // Validar campo requerido
+        if (isRequired) {
+          if (value == null || value.trim().isEmpty) {
+            return '${AppStrings.requiredFieldMessage} - El campo $label no puede estar vacío';
+          }
         }
+
+        // Validar longitud máxima
         if (maxLength != null && value != null && value.length > maxLength!) {
-          return 'Máximo $maxLength caracteres';
+          return 'Máximo $maxLength caracteres permitidos';
         }
+
+        // Validar que no sea solo espacios en blanco
+        if (value != null && value.trim().isEmpty && value.isNotEmpty) {
+          return 'No se permiten solo espacios en blanco';
+        }
+
         return null;
       },
+      autovalidateMode: AutovalidateMode.onUserInteraction,
     );
   }
 }

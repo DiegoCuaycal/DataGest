@@ -20,7 +20,7 @@ class MetadataProvider extends ChangeNotifier {
 
   // Tablas con CRUD habilitado por base de datos
   static const Map<String, List<String>> _allowedTables = {
-    'Estudiantes': ['cursos', 'estudiantes', 'inscripciones', 'profesores', 'usuarios'],
+    'Estudiantes': ['cursos', 'estudiantes', 'inscripciones', 'profesores'],
     'Medicos': ['pacientes', 'medicos', 'citas', 'diagnosticos'],
     'Salud': ['pacientes', 'medicos', 'citas', 'diagnosticos'],
     'Productos': ['productos', 'categorias', 'proveedores', 'inventario'],
