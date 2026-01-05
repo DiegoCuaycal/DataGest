@@ -247,68 +247,91 @@ class FormGeneratorService {
     if (camel.isEmpty) return camel;
     return camel[0].toUpperCase() + camel.substring(1);
   }
-
 /// TRADUCTOR PARA ESCRITURA (Hacia el Backend)
-  String _toBackendCase(String str) {
-    final String lowerStr = str.toLowerCase();
+String _toBackendCase(String str, String tableName) { 
+  final String lowerStr = str.toLowerCase();
 
-    // CASO 1: Estudiantes
-    if (lowerStr == 'legajo') return 'Cedula';
+  // 🚨 REGLA PARA PROFESORES CORREGIDA
+  if (tableName.toLowerCase() == 'profesores') {
+    if (lowerStr == 'usuario_id') return 'usuarioId';
+    if (lowerStr == 'email') return 'email';
+    if (lowerStr == 'nombres') return 'nombres';
+    if (lowerStr == 'especialidad') return 'especialidad';
+  }
+
+  if (lowerStr == 'id') return 'id';
+  if (lowerStr == 'nombres' || lowerStr == 'nombre') return lowerStr;
+    if (lowerStr == 'apellidos') return 'apellidos';
+    if (lowerStr == 'activo') return 'activo';
+    if (lowerStr == 'sku') return 'sku'; 
+    if (lowerStr == 'descripcion') return 'descripcion'; 
+    if (lowerStr == 'estado') return 'estado'; 
+    if (lowerStr == 'especificaciones') return 'especificaciones'; 
     
-    // CASO 2: Calificación
-    if (lowerStr == 'calificacion') return 'calificacion';
+    if (lowerStr == 'cedula' || lowerStr == 'legajo') return 'cedula';
+    if (lowerStr == 'dni') return 'dni';
 
-    // CASO 3, 5 y 8: Campos que requieren PascalCase CON Guion Bajo
-    // 🚨 NOTA: He quitado nombre_empresa, contacto_nombre y sitio_web de aquí
-    // porque tu clase Proveedor en C# NO usa guiones bajos.
-    final columnasConGuionBajo = [
-      'estudiante_id', 'curso_id', 'fecha_inscripcion', // Académico
-      'cita_id', 'descripcion_diagnostico', 'tratamiento_recetado', 'proxima_visita', // Salud
-      'producto_id', 'stock_actual', 'stock_minimo', 'ubicacion_almacen', // Inventario
-      'padre_id', // Categorías
-      'precio_costo', 'precio_venta', 'categoria_id', 'proveedor_id' // Productos
+    final productosPascalGuion = [
+      'precio_costo', 'precio_venta', 'categoria_id', 'proveedor_id'
     ];
 
-    if (columnasConGuionBajo.contains(lowerStr)) {
-      // Convierte: stock_actual -> Stock_Actual
+    if (productosPascalGuion.contains(lowerStr)) {
       return str.split('_').map((part) {
         if (part.isEmpty) return '';
         return part[0].toUpperCase() + part.substring(1);
       }).join('_');
     }
 
-    // CASO 4: Salud - Citas (Minúsculas estrictas)
-    final columnasSalud = ['paciente_id', 'medico_id', 'fecha_hora', 'motivo_consulta'];
-    if (columnasSalud.contains(lowerStr)) {
-      return lowerStr;
+    if (lowerStr == 'usuario_id') return 'usuario_Id';
+    if (lowerStr == 'fecha_nacimiento') return 'fecha_Nacimiento';
+    if (lowerStr == 'created_at') return 'created_At';
+
+    if (lowerStr == 'genero') return 'genero';
+    if (lowerStr == 'direccion') return 'direccion';
+    if (lowerStr == 'telefono') return 'telefono';
+    if (lowerStr == 'grupo_sanguineo') return 'grupo_Sanguineo';
+    if (lowerStr == 'especialidad') return 'especialidad';
+    if (lowerStr == 'consultorio') return 'consultorio';
+    if (lowerStr == 'numero_licencia') return 'numero_Licencia';
+
+    if (lowerStr == 'calificacion') return 'calificacion';
+
+    final columnasInventarioGuion = [
+      'estudiante_id', 'curso_id', 'fecha_inscripcion', 
+      'cita_id', 'descripcion_diagnostico', 'tratamiento_recetado', 'proxima_visita',
+      'producto_id', 'stock_actual', 'stock_minimo', 'ubicacion_almacen',
+      'padre_id'
+    ];
+
+    if (columnasInventarioGuion.contains(lowerStr)) {
+      return str.split('_').map((part) {
+        if (part.isEmpty) return '';
+        return part[0].toUpperCase() + part.substring(1);
+      }).join('_');
     }
 
-    // CASO 6: PACIENTES (PascalCase sin guion bajo)
-    final columnasPacientes = {
-      'fecha_nacimiento': 'FechaNacimiento',
-      'grupo_sanguineo': 'GrupoSanguineo',
-    };
+    final columnasSaludStrict = ['paciente_id', 'medico_id', 'fecha_hora', 'motivo_consulta'];
+    if (columnasSaludStrict.contains(lowerStr)) return lowerStr;
 
-    if (columnasPacientes.containsKey(lowerStr)) {
-      return columnasPacientes[lowerStr]!;
-    }
-
-    // Regla General: Convierte snake_case a PascalCase simple (ej: nombre_empresa -> NombreEmpresa)
-    // Esto es lo que necesita tu clase Proveedor.
+    // Regla General: PascalCase simple
     return _toPascalCase(str);
   }
 
 Map<String, dynamic> prepareDataForSubmit({
     required Map<String, dynamic> formData,
     required List<ColumnInfoModel> columns,
+    required String tableName, 
     int? currentUserId,
+    bool isEditing = false,
+    int? existingId,       
   }) {
     final Map<String, dynamic> preparedData = {};
 
     print('🔍 Preparando datos para enviar:');
+
+    preparedData['Id'] = isEditing ? existingId : 0;
     
     for (var entry in formData.entries) {
-      // 1. Buscar la columna correspondiente en los metadatos
       ColumnInfoModel? column = columns.where((col) => col.name == entry.key).firstOrNull;
 
       if (column == null) {
@@ -317,52 +340,39 @@ Map<String, dynamic> prepareDataForSubmit({
       }
       
       if (column == null) {
-         final camelKey = _toCamelCase(entry.key);
-         column = columns.where((col) => col.name == camelKey).firstOrNull;
+          final camelKey = _toCamelCase(entry.key);
+          column = columns.where((col) => col.name == camelKey).firstOrNull;
       }
 
-      // Si no existe la columna en DB o es el ID (Identity), saltar
-      if (column == null || column.isIdentity) continue;
+      if (column == null || column.isIdentity || column.name.toLowerCase() == 'id') continue;
 
-      // 🚨 MODIFICACIÓN AQUÍ:
-      // Solo saltamos campos de auditoría si NO estamos en la tabla Productos,
-      // o mejor aún, dejamos que el Backend los maneje y los ignoramos siempre.
-      final autoGeneratedFields = [
-        'updated_at', 'deleted_at',
-        'updatedat', 'deletedat',
-      ];
-      
+      final autoGeneratedFields = ['updated_at', 'deleted_at', 'updatedat', 'deletedat'];
       if (autoGeneratedFields.contains(column.name.toLowerCase())) continue;
-
-      // Omitimos usuario_id aquí porque lo inyectaremos manualmente al final
       if (column.name.toLowerCase() == 'usuario_id') continue;
 
-      // 2. Convertir el valor al tipo de dato correcto (String, int, double, etc.)
       final parsedValue = FieldTypeMapper.parseValue(column.type, entry.value);
       
-      // 3. Traducir el nombre al formato que espera C# (PascalCase_con_Guion_Bajo)
-      final backendName = _toBackendCase(column.name);
+      final backendName = _toBackendCase(column.name, tableName); 
       
       preparedData[backendName] = parsedValue;
-      print('   📤 Agregando: $backendName = $parsedValue');
+      print('   📤 Agregando: $backendName = $parsedValue');
     }
 
-    // 🚨 INYECCIÓN AUTOMÁTICA DE USUARIO
     final hasUsuarioIdColumn = columns.any((c) => c.name.toLowerCase() == 'usuario_id');
     if (hasUsuarioIdColumn && currentUserId != null) {
-       preparedData['UsuarioId'] = currentUserId;
-       print('🔐 Auto-injectando UsuarioId: $currentUserId');
+       final userIdKey = _toBackendCase('usuario_id', tableName);
+       preparedData[userIdKey] = currentUserId;
+       print('🔐 Auto-injectando $userIdKey: $currentUserId');
     }
     
-    // 🚨 INYECCIÓN DE FECHA (Para evitar el error 500 en tablas como Productos)
-    // Si la tabla tiene Created_At y no está en los datos, la agregamos
     final hasCreatedAt = columns.any((c) => c.name.toLowerCase() == 'created_at');
-    if (hasCreatedAt && !preparedData.containsKey('Created_At')) {
-      preparedData['Created_At'] = DateTime.now().toIso8601String();
-      print('📅 Auto-injectando fecha de creación');
+    if (hasCreatedAt && !preparedData.containsKey('CreatedAt')) {
+      final createdAtKey = _toBackendCase('created_at', tableName);
+      preparedData[createdAtKey] = DateTime.now().toIso8601String();
+      print('📅 Auto-injectando $createdAtKey para C#');
     }
     
-    print('✅ Datos finales: $preparedData');
+    print('✅ Datos finales preparados: $preparedData');
     return preparedData;
   }
 }

@@ -8,7 +8,7 @@ import '../../../home/presentation/providers/recent_activity_provider.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/services/form_generator_service.dart';
-import '../../data/models/column_info_model.dart'; // Asegúrate de importar esto
+import '../../data/models/column_info_model.dart'; 
 
 class DynamicFormScreen extends StatefulWidget {
   final String tableName;
@@ -44,15 +44,9 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     }
   }
 
-  /// 🚨 FUNCIÓN SABUESO AUXILIAR (Igual que en la lista)
-  /// Ayuda a encontrar el valor aunque las mayúsculas/minúsculas no coincidan
   dynamic _getValueFuzzy(Map<String, dynamic> record, String columnName) {
-    // 1. Intento directo
     if (record.containsKey(columnName)) return record[columnName];
-
-    // 2. Intento Fuzzy (limpiando guiones y case)
     final cleanCol = columnName.replaceAll('_', '').toLowerCase();
-    
     for (var key in record.keys) {
       final cleanKey = key.replaceAll('_', '').toLowerCase();
       if (cleanKey == cleanCol) {
@@ -66,10 +60,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final authProvider = context.read<AuthProvider>();
-    final metadataProvider = context.read<MetadataProvider>(); // Necesitamos metadata para saber las columnas
+    final metadataProvider = context.read<MetadataProvider>();
     final token = authProvider.currentUser?.token ?? '';
-
-    print('🔍 Cargando registro para editar: ${widget.recordId}');
 
     if (dbProvider.currentDatabaseName != null && widget.recordId != null) {
       await crudProvider.loadTableRecord(
@@ -83,34 +75,22 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         setState(() {
           _isLoadingRecord = false;
           if (crudProvider.currentRecord != null) {
-            
-            // 🚨 AQUÍ ESTÁ LA SOLUCIÓN DEL ERROR 400 🚨
-            // En lugar de copiar todo a lo bruto, usamos _populateFormData
-            // para asegurar que las llaves coincidan con lo que espera el generador
             final columns = metadataProvider.getColumnsForTable(widget.tableName);
             _populateFormData(columns, crudProvider.currentRecord!);
-            
-          } else {
-            print('❌ No se pudieron cargar los datos del registro');
           }
         });
       }
     }
   }
 
-  /// ✅ Llena el formData con los datos existentes mapeando correctamente las columnas
   void _populateFormData(List<ColumnInfoModel> columns, Map<String, dynamic> initialData) {
     _formData.clear();
     for (var col in columns) {
-      // Obtenemos el valor sin importar si viene en Mayúsculas o minúsculas
       final val = _getValueFuzzy(initialData, col.name);
-      
-      // Solo agregamos si tiene valor y NO es una columna de auditoría o ID auto-incremental
       if (val != null && !col.isIdentity) {
         _formData[col.name] = val;
       }
     }
-    print('✅ FormData inicializado con ${_formData.length} campos (Pre-carga inteligente)');
   }
 
   Future<void> _saveRecord() async {
@@ -118,9 +98,8 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       return;
     }
 
-    _formKey.currentState!.save(); // Guarda los cambios de los TextFields en _formData
+    _formKey.currentState!.save();
 
-    // Mostrar loading overlay profesional
     LoadingOverlayService.show(
       context,
       text: widget.isEdit ? 'Actualizando registro...' : 'Guardando registro...',
@@ -134,15 +113,14 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
     final columns = metadataProvider.getColumnsForTable(widget.tableName);
     
-    // Aquí _formData ya tiene TODOS los datos (los viejos cargados + los nuevos editados)
     final preparedData = _formGenerator.prepareDataForSubmit(
-      formData: _formData,
-      columns: columns,
-      currentUserId: authProvider.currentUser?.id,
-    );
-
-    print('💾 Guardando registro...');
-    print('📦 Datos a enviar: $preparedData');
+  formData: _formData,
+  columns: columns,
+  tableName: widget.tableName, 
+  currentUserId: authProvider.currentUser?.id,
+  isEditing: widget.isEdit,
+  existingId: widget.recordId != null ? int.tryParse(widget.recordId!) : null,
+);
 
     bool success;
     try {
@@ -163,19 +141,16 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         );
       }
     } finally {
-      // Ocultar loading overlay
       LoadingOverlayService.hide();
     }
 
     if (mounted) {
       if (success) {
-        // Registrar actividad
         context.read<RecentActivityProvider>().addActivity(
               tableName: widget.tableName,
               action: widget.isEdit ? 'update' : 'create',
             );
 
-        // Crear notificación
         final notificationProvider = context.read<NotificationProvider>();
         if (widget.isEdit) {
           await notificationProvider.notifySuccess(
@@ -197,10 +172,9 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
               content: Text(widget.isEdit ? 'Registro actualizado' : 'Registro creado'),
             ),
           );
-          Navigator.pop(context, true); // Retornamos true para recargar la lista
+          Navigator.pop(context, true);
         }
       } else {
-        // Notificación de error
         await context.read<NotificationProvider>().notifyError(
           'Error al guardar',
           crudProvider.errorMessage ?? 'Ocurrió un error al intentar guardar el registro',
@@ -221,7 +195,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final dbProvider = context.watch<DatabaseSelectorProvider>();
     final crudProvider = context.watch<DynamicCrudProvider>();
 
-    // Mostrar loading mientras se carga el registro para editar
     if (widget.isEdit && (_isLoadingRecord || crudProvider.isLoading)) {
       return Scaffold(
         appBar: AppBar(
@@ -245,7 +218,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
       tableName: widget.tableName,
       metadata: metadata,
       currentDatabase: dbProvider.currentDatabaseName!,
-      // Enviamos _formData como datos iniciales para que el formulario se pinte lleno
       initialData: widget.isEdit ? _formData : null, 
       onFieldChanged: (fieldName, value) {
         setState(() {
