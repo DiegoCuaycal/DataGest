@@ -43,7 +43,10 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
   void initState() {
     super.initState();
     _selectedValue = widget.initialValue;
-    print('🎬 ForeignKeyDropdown INIT ${widget.label}: initialValue = $_selectedValue (${_selectedValue?.runtimeType})');
+    print('🎬 ForeignKeyDropdown INIT ${widget.label}:');
+    print('   📥 initialValue = $_selectedValue');
+    print('   📦 Type = ${_selectedValue?.runtimeType}');
+    print('   📋 Table = ${widget.referenceTable}');
     _loadDropdownData();
   }
 
@@ -110,18 +113,33 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
           _items = items;
           _isLoading = false;
 
+          print('📊 Items cargados: ${items.length}');
+          if (items.isNotEmpty) {
+            print('   Primer item: id=${items.first.id}, display=${items.first.displayValue}');
+          }
+
           // Normalizar el valor seleccionado
           if (_selectedValue != null) {
+            print('🔍 Normalizando valor seleccionado: $_selectedValue (${_selectedValue.runtimeType})');
+
             if (_selectedValue is String) {
               _selectedValue = int.tryParse(_selectedValue) ?? _selectedValue;
+              print('   Convertido a: $_selectedValue (${_selectedValue.runtimeType})');
             }
 
-            final valueExists = _items.any((item) => item.id == _selectedValue);
+            final valueExists = _items.any((item) {
+              print('   Comparando: item.id=${item.id} (${item.id.runtimeType}) con _selectedValue=$_selectedValue (${_selectedValue.runtimeType})');
+              return item.id == _selectedValue;
+            });
+
             if (!valueExists) {
-              print('⚠️ ForeignKeyDropdown: Valor inicial $_selectedValue no encontrado en items');
+              print('⚠️ Valor inicial $_selectedValue NO encontrado en items');
+              print('   IDs disponibles: ${_items.map((e) => e.id).toList()}');
             } else {
-              print('✅ ForeignKeyDropdown: Valor inicial $_selectedValue encontrado');
+              print('✅ Valor inicial $_selectedValue SÍ encontrado');
             }
+          } else {
+            print('⚠️ No hay valor inicial seleccionado');
           }
         });
       }

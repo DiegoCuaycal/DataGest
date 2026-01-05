@@ -164,17 +164,35 @@ class FormGeneratorService {
     // 5. Predefined dropdown fields (estado, genero, etc.)
     final lowerName = column.name.toLowerCase();
 
-    // Campo "estado" -> Activo/Inactivo
+    // Campo "estado" -> Opciones según la tabla
     if (lowerName == 'estado') {
+      // Determinar opciones según el contexto (tabla)
+      List<DropdownMenuItem<String>> estadoItems;
+      String defaultValue;
+
+      // Para tabla de Citas
+      if (column.table.toLowerCase() == 'citas') {
+        estadoItems = [
+          DropdownMenuItem(value: 'programada', child: Text('Programada')),
+          DropdownMenuItem(value: 'completada', child: Text('Completada')),
+          DropdownMenuItem(value: 'cancelada', child: Text('Cancelada')),
+        ];
+        defaultValue = 'programada';
+      } else {
+        // Para otras tablas (productos, categorías, etc.)
+        estadoItems = [
+          DropdownMenuItem(value: 'Activo', child: Text('Activo')),
+          DropdownMenuItem(value: 'Inactivo', child: Text('Inactivo')),
+        ];
+        defaultValue = 'Activo';
+      }
+
       return Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: DynamicDropdown(
           label: column.name,
-          items: [
-            DropdownMenuItem(value: 'Activo', child: Text('Activo')),
-            DropdownMenuItem(value: 'Inactivo', child: Text('Inactivo')),
-          ],
-          value: initialValue?.toString() ?? 'Activo',
+          items: estadoItems,
+          value: initialValue?.toString() ?? defaultValue,
           onChanged: (value) => onChanged(column.name, value),
           isRequired: true,
         ),
@@ -290,6 +308,9 @@ class FormGeneratorService {
   ) {
     if (initialData == null || initialData.isEmpty) return null;
 
+    print('🔍 Buscando valor inicial para: $columnName');
+    print('   Datos disponibles: ${initialData.keys.toList()}');
+
     // --- ZONA DE PARCHES (Casos Especiales) ---
 
     // 1. Estudiantes (Legajo -> Cedula)
@@ -299,37 +320,57 @@ class FormGeneratorService {
     }
 
     // 2. Búsqueda Fuzzy (Ignora mayúsculas y guiones bajos)
-    // Resuelve: fecha_inscripcion vs FechaInscripcion
+    // Resuelve: fecha_inscripcion vs FechaInscripcion, profesor_id vs profesor_Id
     final cleanColumnName = columnName.replaceAll('_', '').toLowerCase();
-    
+
     for (var key in initialData.keys) {
       final cleanKey = key.replaceAll('_', '').toLowerCase();
       if (cleanKey == cleanColumnName) {
+        print('   ✅ Encontrado con búsqueda fuzzy: $key = ${initialData[key]}');
         return initialData[key];
       }
     }
     // --- FIN ZONA DE PARCHES ---
 
     // Búsquedas Estándar
-    if (initialData.containsKey(columnName)) return initialData[columnName];
+    if (initialData.containsKey(columnName)) {
+      print('   ✅ Encontrado exacto: $columnName = ${initialData[columnName]}');
+      return initialData[columnName];
+    }
 
     final backendName = ColumnNameMapper.getBackendName(tableName, columnName);
-    if (backendName != columnName && initialData.containsKey(backendName)) return initialData[backendName];
+    if (backendName != columnName && initialData.containsKey(backendName)) {
+      print('   ✅ Encontrado con backend name: $backendName = ${initialData[backendName]}');
+      return initialData[backendName];
+    }
 
     final pascalCaseName = _toPascalCase(columnName);
-    if (initialData.containsKey(pascalCaseName)) return initialData[pascalCaseName];
+    if (initialData.containsKey(pascalCaseName)) {
+      print('   ✅ Encontrado con PascalCase: $pascalCaseName = ${initialData[pascalCaseName]}');
+      return initialData[pascalCaseName];
+    }
 
     final camelCaseName = _toCamelCase(columnName);
-    if (initialData.containsKey(camelCaseName)) return initialData[camelCaseName];
+    if (initialData.containsKey(camelCaseName)) {
+      print('   ✅ Encontrado con camelCase: $camelCaseName = ${initialData[camelCaseName]}');
+      return initialData[camelCaseName];
+    }
 
     final lowerColumnName = columnName.toLowerCase();
     for (var entry in initialData.entries) {
-      if (entry.key.toLowerCase() == lowerColumnName) return entry.value;
+      if (entry.key.toLowerCase() == lowerColumnName) {
+        print('   ✅ Encontrado case-insensitive: ${entry.key} = ${entry.value}');
+        return entry.value;
+      }
     }
 
     final snakeCaseName = _toSnakeCase(columnName);
-    if (snakeCaseName != columnName && initialData.containsKey(snakeCaseName)) return initialData[snakeCaseName];
+    if (snakeCaseName != columnName && initialData.containsKey(snakeCaseName)) {
+      print('   ✅ Encontrado con snake_case: $snakeCaseName = ${initialData[snakeCaseName]}');
+      return initialData[snakeCaseName];
+    }
 
+    print('   ⚠️ NO encontrado ningún valor para: $columnName');
     return null;
   }
 
@@ -399,13 +440,14 @@ String _toBackendCase(String str, String tableName) {
   if (lowerStr == 'dni') return 'dni';
 
   // 3.  REGLAS ESTRICTAS PARA SWAGGER (Actualizado con campos faltantes)
-  // Se agregaron campos de Citas y Pacientes para evitar el Error 500
+  // Se agregaron campos de Citas, Pacientes y Cursos para evitar el Error 500
   final columnasPascalGuionStrict = [
     'cita_id', 'descripcion_diagnostico', 'tratamiento_recetado', 'proxima_visita',
     'producto_id', 'stock_actual', 'stock_minimo', 'ubicacion_almacen',
     'estudiante_id', 'curso_id', 'fecha_inscripcion', 'padre_id',
     'paciente_id', 'medico_id', 'fecha_hora', 'motivo_consulta',
-    'fecha_nacimiento', 'grupo_sanguineo', 'numero_licencia', 'created_at'
+    'fecha_nacimiento', 'grupo_sanguineo', 'numero_licencia', 'created_at',
+    'profesor_id'  // 🎓 Campo para Cursos
   ];
 
   if (columnasPascalGuionStrict.contains(lowerStr)) {
@@ -432,6 +474,9 @@ String _toBackendCase(String str, String tableName) {
     if (lowerStr == 'grupo_sanguineo') return 'grupo_Sanguineo';
     if (lowerStr == 'numero_licencia') return 'numero_Licencia';
     if (lowerStr == 'created_at') return 'created_At';
+
+    // Campo para Cursos (Educación)
+    if (lowerStr == 'profesor_id') return 'profesor_Id';
   }
 
   // 4. PRODUCTOS (Pascal_Guion: Precio_Costo) - Sin cambios

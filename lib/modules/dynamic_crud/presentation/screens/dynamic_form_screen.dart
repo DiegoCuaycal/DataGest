@@ -85,12 +85,19 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
   void _populateFormData(List<ColumnInfoModel> columns, Map<String, dynamic> initialData) {
     _formData.clear();
+    print('📝 Poblando _formData con initialData: ${initialData.keys.toList()}');
+
     for (var col in columns) {
       final val = _getValueFuzzy(initialData, col.name);
-      if (val != null && !col.isIdentity) {
-        _formData[col.name] = val;
+
+      // IMPORTANTE: Copiar TODOS los valores, incluso los null, excepto el ID
+      if (!col.isIdentity) {
+        _formData[col.name] = val; // Esto ahora incluye valores null
+        print('   ${col.name} = $val');
       }
     }
+
+    print('✅ _formData final: ${_formData.keys.toList()}');
   }
 
   Future<void> _saveRecord() async {
