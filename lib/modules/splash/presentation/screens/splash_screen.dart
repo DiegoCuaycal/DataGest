@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/config/routes.dart';
+import 'package:herramienta_case/core/config/app_build_config.dart';
+import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
 import 'package:lottie/lottie.dart';
 
 /// Pantalla de inicio profesional con animación de carga
@@ -112,10 +115,28 @@ class _SplashScreenState extends State<SplashScreen>
     _rotationController.repeat();
     _pulseController.repeat(reverse: true);
 
-    // Esperar a que termine la secuencia y navegar
+    // Esperar a que termine la secuencia
     await Future.delayed(const Duration(milliseconds: 2200));
 
-    if (mounted) {
+    if (!mounted) return;
+
+    // ========== LÓGICA DE ARRANQUE INTELIGENTE ==========
+    // Verificar si la app está pre-configurada para una base de datos específica
+    if (AppBuildConfig.isPreConfigured) {
+      // MODO PRE-CONFIGURADO: APK generada para una base específica
+      final databaseName = AppBuildConfig.defaultDatabaseName;
+      debugPrint('🎯 Modo Pre-Configurado detectado: Base "$databaseName"');
+
+      // Seleccionar automáticamente la base de datos configurada
+      final dbProvider = context.read<DatabaseSelectorProvider>();
+      dbProvider.selectDatabaseByName(databaseName);
+
+      // Navegar directamente al login (sin pasar por database selector)
+      // La metadata se cargará después del login exitoso
+      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+    } else {
+      // MODO GENÉRICO: APK sin pre-configuración
+      debugPrint('🔄 Modo Genérico: Mostrando selector de bases de datos');
       Navigator.of(context).pushReplacementNamed(AppRoutes.selectDatabase);
     }
   }

@@ -18,27 +18,12 @@ class MetadataProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // Tablas con CRUD habilitado por base de datos
-  static const Map<String, List<String>> _allowedTables = {
-    'Estudiantes': ['cursos', 'estudiantes', 'inscripciones', 'profesores'],
-    'Medicos': ['pacientes', 'medicos', 'citas', 'diagnosticos'],
-    'Salud': ['pacientes', 'medicos', 'citas', 'diagnosticos'],
-    'Productos': ['productos', 'categorias', 'proveedores', 'inventario'],
-  };
-
+  /// Retorna todas las tablas disponibles en la base de datos
+  /// NOTA: Ya no se filtran tablas - la app es 100% agnóstica
+  /// Todas las tablas que devuelve el backend son accesibles
   List<TableInfoModel> get tables {
     if (_metadata == null) return [];
-
-    final dbName = _metadata!.databaseName;
-    final allowed = _allowedTables[dbName];
-
-    // Si no hay configuración específica, mostrar todas las tablas
-    if (allowed == null) return _metadata!.tables;
-
-    // Filtrar solo las tablas permitidas
-    return _metadata!.tables.where((table) {
-      return allowed.contains(table.table.toLowerCase());
-    }).toList();
+    return _metadata!.tables;
   }
 
   String? get databaseName => _metadata?.databaseName;

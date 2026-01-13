@@ -39,6 +39,20 @@ class DatabaseSelectorProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Selecciona una base de datos por su nombre (usado para pre-configuración)
+  void selectDatabaseByName(String databaseName) {
+    final database = _availableDatabases.firstWhere(
+      (db) => db.name.toLowerCase() == databaseName.toLowerCase(),
+      orElse: () => DatabaseInfoModel(
+        id: 0,
+        name: databaseName,
+        description: 'Base de datos $databaseName',
+      ),
+    );
+    _selectedDatabase = database;
+    notifyListeners();
+  }
+
   void clearSelection() {
     _selectedDatabase = null;
     notifyListeners();
