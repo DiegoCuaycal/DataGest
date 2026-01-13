@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:herramienta_case/modules/dynamic_crud/data/datasources/dynamic_remote_datasource.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/models/table_info_model.dart';
+// IMPORTANTE: Necesitamos importar el modelo de metadata
+import 'package:herramienta_case/modules/dynamic_crud/data/models/database_metadata_model.dart'; 
 import 'package:herramienta_case/modules/export/domain/models/export_config.dart';
 import 'package:herramienta_case/modules/export/domain/models/export_result.dart';
 import 'package:herramienta_case/modules/export/domain/services/export_service.dart';
@@ -17,31 +19,32 @@ class ExportRepository {
 
   /// Exporta datos de una tabla específica
   Future<ExportResult> exportTable({
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO V2
     required String databaseName,
     required String tableName,
     required ExportConfig config,
     required String token,
-    bool useMockData = false, // Nueva opción para usar datos de prueba
+    bool useMockData = false,
   }) async {
     try {
       List<Map<String, dynamic>> data;
 
       if (useMockData) {
-        // Usar datos de prueba
+        // Usar datos de prueba (Ahora sí funcionará porque agregamos el método al datasource)
         print('⚠️ Usando datos de prueba para tabla: $tableName');
         data = await remoteDataSource.getMockTableRecords(tableName);
 
         if (data.isEmpty) {
-          // Si no hay mock para esta tabla, crear datos genéricos
           data = [
             {'id': 1, 'nombre': 'Dato 1', 'descripcion': 'Ejemplo'},
             {'id': 2, 'nombre': 'Dato 2', 'descripcion': 'Ejemplo'},
           ];
         }
       } else {
-        // Obtener los datos reales de la tabla
+        // Obtener los datos reales de la tabla usando la Lógica V2
+        // Nótese que ahora pasamos 'metadata' y quitamos 'databaseName' del llamado
         data = await remoteDataSource.getTableRecords(
-          databaseName: databaseName,
+          metadata: metadata, // <--- Pasamos la metadata aquí
           tableName: tableName,
           token: token,
         );
@@ -63,18 +66,18 @@ class ExportRepository {
 
   /// Exporta datos de múltiples tablas
   Future<List<ExportResult>> exportMultipleTables({
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO V2
     required String databaseName,
     required List<TableInfoModel> tables,
     required ExportConfig baseConfig,
     required String token,
-    bool useMockData = false, // Opción para usar datos de prueba
+    bool useMockData = false,
   }) async {
     final results = <ExportResult>[];
     final errors = <String>[];
 
     if (useMockData) {
       print('⚠️⚠️⚠️ MODO DE PRUEBA ACTIVADO ⚠️⚠️⚠️');
-      print('Se usarán datos de prueba en lugar de datos reales');
     }
 
     print('🔄 Iniciando exportación de ${tables.length} tablas...');
@@ -83,11 +86,11 @@ class ExportRepository {
       try {
         print('📊 Procesando tabla: ${table.table}');
 
-        // Crear configuración específica para cada tabla
         final config = baseConfig.copyWith(tableName: table.table);
 
-        // Exportar la tabla (con o sin datos mock)
+        // Exportar la tabla pasando la metadata
         final result = await exportTable(
+          metadata: metadata, // <--- Pasamos la metadata
           databaseName: databaseName,
           tableName: table.table,
           config: config,
@@ -98,7 +101,6 @@ class ExportRepository {
         results.add(result);
         print('✅ Tabla ${table.table} exportada exitosamente');
       } catch (e) {
-        // Guardar el error pero continuar con las demás tablas
         final errorMsg = 'Tabla ${table.table}: ${_extractErrorMessage(e.toString())}';
         errors.add(errorMsg);
         print('❌ Error en tabla ${table.table}: $e');
@@ -118,13 +120,7 @@ class ExportRepository {
 
     if (results.isEmpty) {
       throw Exception(
-        'No se pudo exportar ninguna tabla.\n\n'
-        'Posibles causas:\n'
-        '• El backend no está corriendo\n'
-        '• Error 404: Los endpoints no existen\n'
-        '• Las tablas están vacías\n\n'
-        'Errores:\n${errors.join('\n')}\n\n'
-        '💡 Sugerencia: Activa el modo de prueba para verificar la funcionalidad.'
+        'No se pudo exportar ninguna tabla.\nErrors:\n${errors.join('\n')}'
       );
     }
 
@@ -145,12 +141,14 @@ class ExportRepository {
 
   /// Exporta todas las tablas de la base de datos
   Future<List<ExportResult>> exportAllTables({
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO V2
     required String databaseName,
     required List<TableInfoModel> allTables,
     required ExportConfig config,
     required String token,
   }) async {
     return await exportMultipleTables(
+      metadata: metadata, // <--- Pasamos la metadata
       databaseName: databaseName,
       tables: allTables,
       baseConfig: config,

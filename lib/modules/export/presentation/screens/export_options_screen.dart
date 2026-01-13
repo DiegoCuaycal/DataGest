@@ -278,9 +278,19 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
     final authProvider = context.read<AuthProvider>();
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final exportProvider = context.read<ExportProvider>();
+    final metadataProvider = context.read<MetadataProvider>(); // <--- 1. LEER EL PROVIDER DE METADATA
 
     final token = authProvider.currentUser?.token ?? '';
     final databaseName = dbProvider.currentDatabaseName ?? '';
+
+    // Validar que tengamos la metadata necesaria
+    if (metadataProvider.metadata == null) {
+       NotificationService.showError(
+          context,
+          'Error: No se ha cargado la estructura de la base de datos (Metadata)',
+        );
+        return;
+    }
 
     if (token.isEmpty || databaseName.isEmpty) {
       if (context.mounted) {
@@ -311,13 +321,13 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
 
     try {
       // Exportar
-      // TEMPORAL: Activar modo de prueba por defecto hasta que se arregle el backend
       final results = await exportProvider.exportMultipleTables(
+        metadata: metadataProvider.metadata!, // <--- 2. PASAR METADATA
         databaseName: databaseName,
         tables: tablesToExport,
         baseConfig: config,
         token: token,
-        useMockData: true, // CAMBIAR A false cuando el backend funcione
+        useMockData: true, // TEMPORAL: Mantener true si el backend V2 de exportación falla
       );
 
       if (!context.mounted) return;

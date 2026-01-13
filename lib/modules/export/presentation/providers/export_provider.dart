@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/models/table_info_model.dart';
+// 1. IMPORTANTE: Importar el modelo de metadata
+import 'package:herramienta_case/modules/dynamic_crud/data/models/database_metadata_model.dart'; 
 import 'package:herramienta_case/modules/export/data/repositories/export_repository.dart';
 import 'package:herramienta_case/modules/export/domain/models/export_config.dart';
 import 'package:herramienta_case/modules/export/domain/models/export_result.dart';
@@ -36,6 +38,7 @@ class ExportProvider extends ChangeNotifier {
 
   /// Exporta datos de una tabla específica
   Future<ExportResult?> exportTable({
+    required DatabaseMetadataModel metadata, // <--- 2. NUEVO REQUISITO
     required String databaseName,
     required String tableName,
     required ExportConfig config,
@@ -46,6 +49,7 @@ class ExportProvider extends ChangeNotifier {
       _clearError();
 
       final result = await repository.exportTable(
+        metadata: metadata, // <--- 3. PASAMOS METADATA AL REPO
         databaseName: databaseName,
         tableName: tableName,
         config: config,
@@ -64,11 +68,12 @@ class ExportProvider extends ChangeNotifier {
 
   /// Exporta datos de múltiples tablas
   Future<List<ExportResult>?> exportMultipleTables({
+    required DatabaseMetadataModel metadata, // <--- 2. NUEVO REQUISITO
     required String databaseName,
     required List<TableInfoModel> tables,
     required ExportConfig baseConfig,
     required String token,
-    bool useMockData = false, // TEMPORAL: Para probar mientras se arregla el backend
+    bool useMockData = false, 
   }) async {
     try {
       _setLoading(true, 'Exportando ${tables.length} tablas...');
@@ -77,6 +82,7 @@ class ExportProvider extends ChangeNotifier {
 
       // Usar el método del repositorio que maneja todo el proceso
       final results = await repository.exportMultipleTables(
+        metadata: metadata, // <--- 3. PASAMOS METADATA AL REPO
         databaseName: databaseName,
         tables: tables,
         baseConfig: baseConfig,
@@ -96,12 +102,14 @@ class ExportProvider extends ChangeNotifier {
 
   /// Exporta todas las tablas de la base de datos
   Future<List<ExportResult>?> exportAllTables({
+    required DatabaseMetadataModel metadata, // <--- 2. NUEVO REQUISITO
     required String databaseName,
     required List<TableInfoModel> allTables,
     required ExportConfig config,
     required String token,
   }) async {
     return await exportMultipleTables(
+      metadata: metadata, // <--- 3. PASAMOS METADATA
       databaseName: databaseName,
       tables: allTables,
       baseConfig: config,

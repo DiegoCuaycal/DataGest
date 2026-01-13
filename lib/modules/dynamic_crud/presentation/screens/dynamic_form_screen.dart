@@ -60,11 +60,18 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final authProvider = context.read<AuthProvider>();
-    final metadataProvider = context.read<MetadataProvider>();
+    final metadataProvider = context.read<MetadataProvider>(); // Necesario para V2
     final token = authProvider.currentUser?.token ?? '';
+
+    // Validación de seguridad: Si no hay metadata, no podemos consultar V2
+    if (metadataProvider.metadata == null) {
+      setState(() => _isLoadingRecord = false);
+      return;
+    }
 
     if (dbProvider.currentDatabaseName != null && widget.recordId != null) {
       await crudProvider.loadTableRecord(
+        metadata: metadataProvider.metadata!, // <--- NUEVO: Pasamos la metadata
         databaseName: dbProvider.currentDatabaseName!,
         tableName: widget.tableName,
         id: widget.recordId!,
@@ -103,7 +110,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
   Future<void> _saveRecord() async {
     // Validar el formulario
     if (!_formKey.currentState!.validate()) {
-      // Mostrar mensaje de error si hay campos inválidos
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Row(
@@ -163,21 +169,31 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final authProvider = context.read<AuthProvider>();
     final token = authProvider.currentUser?.token ?? '';
 
+    // Validación de seguridad
+    if (metadataProvider.metadata == null) {
+      LoadingOverlayService.hide();
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: No se ha cargado la metadata de la base de datos'))
+      );
+      return;
+    }
+
     final columns = metadataProvider.getColumnsForTable(widget.tableName);
     
     final preparedData = _formGenerator.prepareDataForSubmit(
-  formData: _formData,
-  columns: columns,
-  tableName: widget.tableName, 
-  currentUserId: authProvider.currentUser?.id,
-  isEditing: widget.isEdit,
-  existingId: widget.recordId != null ? int.tryParse(widget.recordId!) : null,
-);
+      formData: _formData,
+      columns: columns,
+      tableName: widget.tableName, 
+      currentUserId: authProvider.currentUser?.id,
+      isEditing: widget.isEdit,
+      existingId: widget.recordId != null ? int.tryParse(widget.recordId!) : null,
+    );
 
     bool success;
     try {
       if (widget.isEdit && widget.recordId != null) {
         success = await crudProvider.updateRecord(
+          metadata: metadataProvider.metadata!, // <--- NUEVO: Pasamos la metadata
           databaseName: dbProvider.currentDatabaseName!,
           tableName: widget.tableName,
           id: widget.recordId!,
@@ -186,6 +202,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         );
       } else {
         success = await crudProvider.createRecord(
+          metadata: metadataProvider.metadata!, // <--- NUEVO: Pasamos la metadata
           databaseName: dbProvider.currentDatabaseName!,
           tableName: widget.tableName,
           data: preparedData,

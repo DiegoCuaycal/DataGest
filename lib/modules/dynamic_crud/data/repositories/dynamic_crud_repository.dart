@@ -7,6 +7,8 @@ class DynamicCrudRepository {
 
   DynamicCrudRepository({required this.remoteDataSource});
 
+  // 1. GET METADATA
+  // Este NO cambia, porque es el encargado de OBTENER la metadata inicial.
   Future<DatabaseMetadataModel> getMetadata({
     required String databaseName,
     required String token,
@@ -25,8 +27,11 @@ class DynamicCrudRepository {
     }
   }
 
+  // 2. GET TABLE RECORDS (Lista)
+  // Cambio: Agregamos 'metadata'
   Future<List<Map<String, dynamic>>> getTableRecords({
-    required String databaseName,
+    required DatabaseMetadataModel metadata, // <--- NUEVO
+    required String databaseName, // Se mantiene por si acaso (legacy support)
     required String tableName,
     required String token,
     bool useMock = false,
@@ -36,7 +41,8 @@ class DynamicCrudRepository {
         return await remoteDataSource.getMockTableRecords(tableName);
       }
       return await remoteDataSource.getTableRecords(
-        databaseName: databaseName,
+        metadata: metadata, // Pasamos la metadata al datasource
+        // databaseName: databaseName, // Ya va dentro de metadata, pero el datasource usa el objeto
         tableName: tableName,
         token: token,
       );
@@ -45,7 +51,10 @@ class DynamicCrudRepository {
     }
   }
 
+  // 3. GET PAGINATED
+  // Cambio: Agregamos 'metadata'
   Future<Map<String, dynamic>> getTableRecordsPaginated({
+    required DatabaseMetadataModel metadata, // <--- NUEVO
     required String databaseName,
     required String tableName,
     required String token,
@@ -64,8 +73,8 @@ class DynamicCrudRepository {
         );
       }
       return await remoteDataSource.getTableRecordsPaginated(
-        databaseName: databaseName,
-        tableName: tableName,
+        metadata: metadata, // Pasamos la metadata
+        tableName: tableName, // El datasource ya no pide databaseName aquí explícitamente si usa V2
         token: token,
         page: page,
         pageSize: pageSize,
@@ -76,7 +85,10 @@ class DynamicCrudRepository {
     }
   }
 
+  // 4. GET BY ID
+  // Cambio: Agregamos 'metadata'
   Future<Map<String, dynamic>> getTableRecord({
+    required DatabaseMetadataModel metadata, // <--- NUEVO
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -84,7 +96,7 @@ class DynamicCrudRepository {
   }) async {
     try {
       return await remoteDataSource.getTableRecord(
-        databaseName: databaseName,
+        metadata: metadata,
         tableName: tableName,
         id: id,
         token: token,
@@ -94,7 +106,10 @@ class DynamicCrudRepository {
     }
   }
 
+  // 5. CREATE
+  // Cambio: Agregamos 'metadata'
   Future<Map<String, dynamic>> createTableRecord({
+    required DatabaseMetadataModel metadata, // <--- NUEVO
     required String databaseName,
     required String tableName,
     required Map<String, dynamic> data,
@@ -102,7 +117,7 @@ class DynamicCrudRepository {
   }) async {
     try {
       return await remoteDataSource.createTableRecord(
-        databaseName: databaseName,
+        metadata: metadata,
         tableName: tableName,
         data: data,
         token: token,
@@ -112,7 +127,10 @@ class DynamicCrudRepository {
     }
   }
 
+  // 6. UPDATE
+  // Cambio: Agregamos 'metadata'
   Future<Map<String, dynamic>> updateTableRecord({
+    required DatabaseMetadataModel metadata, // <--- NUEVO
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -121,7 +139,7 @@ class DynamicCrudRepository {
   }) async {
     try {
       return await remoteDataSource.updateTableRecord(
-        databaseName: databaseName,
+        metadata: metadata,
         tableName: tableName,
         id: id,
         data: data,
@@ -132,7 +150,10 @@ class DynamicCrudRepository {
     }
   }
 
+  // 7. DELETE
+  // Cambio: Agregamos 'metadata' (para consistencia, aunque internamente use legacy)
   Future<bool> deleteTableRecord({
+    required DatabaseMetadataModel metadata, // <--- NUEVO
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -140,6 +161,7 @@ class DynamicCrudRepository {
   }) async {
     try {
       return await remoteDataSource.deleteTableRecord(
+        metadata: metadata,
         databaseName: databaseName,
         tableName: tableName,
         id: id,
@@ -150,6 +172,8 @@ class DynamicCrudRepository {
     }
   }
 
+  // 8. DROPDOWN
+  // Este se queda IGUAL porque el datasource no se migró a V2 para dropdowns
   Future<List<DropdownItemModel>> getDropdownData({
     required String databaseName,
     required String tableName,
