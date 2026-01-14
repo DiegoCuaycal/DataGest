@@ -18,30 +18,20 @@ class MetadataProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // Tablas con CRUD habilitado por base de datos
-  static const Map<String, List<String>> _allowedTables = {
-    'Estudiantes': ['cursos', 'estudiantes', 'inscripciones', 'profesores'],
-    'Medicos': ['pacientes', 'medicos', 'citas', 'diagnosticos'],
-    'Salud': ['pacientes', 'medicos', 'citas', 'diagnosticos'],
-    'Productos': ['productos', 'categorias', 'proveedores', 'inventario'],
-  };
+  String? get databaseName => _metadata?.databaseName;
 
+  // --- CORRECCIÓN SENIOR: ELIMINAMOS _allowedTables ---
+  // El Frontend no debe filtrar nada. Si el Backend envía la tabla, se muestra.
+  // Si quieres ocultar tablas (como logs o auditoría), eso se debe filtrar en el Backend (C#)
+  // o usar una convención (ej: ignorar tablas que empiecen con sys_).
+  
   List<TableInfoModel> get tables {
     if (_metadata == null) return [];
-
-    final dbName = _metadata!.databaseName;
-    final allowed = _allowedTables[dbName];
-
-    // Si no hay configuración específica, mostrar todas las tablas
-    if (allowed == null) return _metadata!.tables;
-
-    // Filtrar solo las tablas permitidas
-    return _metadata!.tables.where((table) {
-      return allowed.contains(table.table.toLowerCase());
-    }).toList();
+    
+    // Retornamos TODAS las tablas que el Backend nos autorizó ver.
+    // Esto hace que la app sea verdaderamente dinámica.
+    return _metadata!.tables;
   }
-
-  String? get databaseName => _metadata?.databaseName;
 
   Future<void> loadMetadata({
     required String databaseName,

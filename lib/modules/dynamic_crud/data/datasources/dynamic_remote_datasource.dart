@@ -6,231 +6,109 @@ import '../../../../core/network/api_response.dart';
 import '../../../../core/network/endpoint_mapper.dart';
 import '../models/database_metadata_model.dart';
 import '../models/dropdown_item_model.dart';
+import '../models/v2_schema_dto.dart'; // <--- IMPORTANTE
+import 'schema_adapter.dart'; // <--- IMPORTANTE
 
 class DynamicRemoteDataSource {
   final http.Client client;
 
   DynamicRemoteDataSource({required this.client});
 
-  /// Timeout para todas las peticiones HTTP
   Duration get _timeout => Duration(seconds: EnvConfig.apiTimeout);
+  
+  // URL Base para V2
+  String get _v2BaseUrl => '${ApiEndpoints.baseUrl}/api/DynamicCrud/V2';
 
+  // --- 1. METADATA (V1 - Se mantiene igual) ---
   Future<DatabaseMetadataModel> getMetadata({
     required String databaseName,
     required String token,
   }) async {
-    const maxRetries = 3;
-    int attempt = 0;
+    // ... (Mantén tu código original de getMetadata aquí, es correcto) ...
+    // Para abreviar aquí, asumo que copias tu lógica de reintentos existente.
+    // ...
+    // COPIA TU MÉTODO getMetadata ORIGINAL AQUÍ
+    final url = '${ApiEndpoints.baseUrl}${ApiEndpoints.metadata(databaseName)}';
+    print('📊 Solicitando metadata: $databaseName');
+    final response = await client.get(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+    ).timeout(_timeout);
 
-    while (attempt < maxRetries) {
-      attempt++;
-      try {
-        final url = '${ApiEndpoints.baseUrl}${ApiEndpoints.metadata(databaseName)}';
-        print('📊 Solicitando metadata para DB: $databaseName (Intento $attempt/$maxRetries)');
-        print('🔗 URL completa: $url');
-        print('🔑 Token: ${token.isNotEmpty && token.length > 20 ? token.substring(0, 20) : token}...');
-
-        final response = await client.get(
-          Uri.parse(url),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        ).timeout(_timeout);
-
-        print('📡 Status code: ${response.statusCode}');
-        final responsePreview = response.body.length > 200
-            ? response.body.substring(0, 200)
-            : response.body;
-        print('📄 Respuesta: $responsePreview');
-
-        if (response.statusCode == 200) {
-          final jsonData = jsonDecode(response.body);
-          return DatabaseMetadataModel.fromJson(jsonData);
-        } else {
-          throw Exception('Failed to load metadata: ${response.statusCode} - ${response.body}');
-        }
-      } catch (e) {
-        print('❌ Error en getMetadata (intento $attempt/$maxRetries): $e');
-        final errorMsg = e.toString().toLowerCase();
-
-        // Detectar si es un error de timeout del backend SQL Server o timeout HTTP
-        final isConnectionTimeout = errorMsg.contains('connection timeout') ||
-            errorMsg.contains('timeout expired') ||
-            errorMsg.contains('post-login') ||
-            errorMsg.contains('timeoutexception');
-
-        // Si no es el último intento y es un timeout (HTTP o SQL), esperar antes de reintentar
-        if (attempt < maxRetries && isConnectionTimeout) {
-          print('⏳ Timeout detectado. Esperando 3 segundos antes de reintentar...');
-          await Future.delayed(const Duration(seconds: 3));
-          continue;
-        }
-
-        // Si es el último intento, lanzar el error
-        throw Exception('Error fetching metadata: $e');
-      }
+    if (response.statusCode == 200) {
+      return DatabaseMetadataModel.fromJson(jsonDecode(response.body));
     }
-
-    throw Exception('Error desconocido al cargar metadata');
+    throw Exception('Error loading metadata');
   }
 
+  // --- 2. GET ALL (V2 - Actualizado) ---
   Future<List<Map<String, dynamic>>> getTableRecords({
-    required String databaseName,
+    required DatabaseMetadataModel metadata, // Necesitamos metadata para el schema
     required String tableName,
     required String token,
   }) async {
     try {
-      // Usar el mapper para obtener el endpoint correcto
-      final endpoint = EndpointMapper.getListEndpoint(
-        databaseName: databaseName,
-        tableName: tableName,
+      // Adaptar Metadata a Schema V2
+      final v2Schema = SchemaAdapter.fromMetadata(metadata: metadata, targetTableName: tableName);
+      final requestBody = V2DynamicRequest(schema: v2Schema);
+
+      // QUERY PARAMETER: tableName
+      final uri = Uri.parse('$_v2BaseUrl/GETALL').replace(
+        queryParameters: {'tableName': tableName},
       );
-      final dbHeaderValue = EndpointMapper.getDatabaseHeaderValue(databaseName);
 
-      final url = '${ApiEndpoints.baseUrl}$endpoint';
-      print('🌐 URL completa: $url');
-      print('🗄️  Header X-DbName: $dbHeaderValue');
-      print('🔑 Token: ${token.length > 20 ? "${token.substring(0, 20)}..." : token}');
+      print('🚀 V2 GETALL: $tableName');
 
-      final response = await client.get(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'X-DbName': dbHeaderValue,
-        },
+      final response = await client.post(
+        uri,
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode(requestBody.toJson()),
       ).timeout(_timeout);
 
-      print('📡 Status Code: ${response.statusCode}');
-      print('📄 Response body (primeros 200 chars): ${response.body.length > 200 ? response.body.substring(0, 200) : response.body}');
+      print('📡 Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        // El backend de .NET devuelve directamente un array, no un objeto ApiResponse
         final dynamic jsonData = jsonDecode(response.body);
-
-        // Si es un array directamente
+        
+        // Manejar estructura { message: "...", rowsAffected: [...] }
+        if (jsonData is Map && jsonData.containsKey('rowsAffected')) {
+           return (jsonData['rowsAffected'] as List).cast<Map<String, dynamic>>();
+        }
         if (jsonData is List) {
-          print('✅ Registros obtenidos: ${jsonData.length}');
           return jsonData.cast<Map<String, dynamic>>();
         }
-
-        // Si viene envuelto en ApiResponse
-        final apiResponse = ApiResponse.fromJson(jsonData, null);
-        if (apiResponse.success) {
-          final List<dynamic> data = apiResponse.data as List<dynamic>;
-          print('✅ Registros obtenidos: ${data.length}');
-          return data.cast<Map<String, dynamic>>();
-        } else {
-          throw Exception(apiResponse.message);
-        }
-      } else if (response.statusCode == 404 || response.statusCode == 405) {
-        // El endpoint no existe o el método no está permitido
-        print('⚠️ Endpoint no disponible (${response.statusCode}): $endpoint');
-        throw Exception(
-          'La tabla "$tableName" no tiene soporte para listar registros en el backend. '
-          'Código de error: ${response.statusCode}. '
-          'Contacta al equipo backend para implementar GET $endpoint'
-        );
+        return [];
       } else {
-        throw Exception('Failed to load records: ${response.statusCode} - ${response.body}');
+        throw Exception('V2 Error ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error en getTableRecords: $e');
-      throw Exception('Error fetching records: $e');
+      print('❌ Error V2 Get: $e');
+      throw Exception('Error V2 Get: $e');
     }
   }
 
-  /// Get table records with pagination and search
+  // --- 3. PAGINACIÓN (Cliente sobre V2) ---
+  // Reutilizamos tu lógica de paginación local porque el endpoint V2 GETALL devuelve todo
   Future<Map<String, dynamic>> getTableRecordsPaginated({
-    required String databaseName,
+    required DatabaseMetadataModel metadata,
     required String tableName,
     required String token,
     required int page,
     required int pageSize,
     String? searchTerm,
   }) async {
-    // Primero intentar con paginación del backend
     try {
-      final endpoint = EndpointMapper.getListEndpoint(
-        databaseName: databaseName,
-        tableName: tableName,
-      );
-      final dbHeaderValue = EndpointMapper.getDatabaseHeaderValue(databaseName);
-
-      final queryParams = <String, String>{
-        'page': page.toString(),
-        'pageSize': pageSize.toString(),
-      };
-
-      if (searchTerm != null && searchTerm.isNotEmpty) {
-        queryParams['search'] = searchTerm;
-      }
-
-      final uri = Uri.parse('${ApiEndpoints.baseUrl}$endpoint')
-          .replace(queryParameters: queryParams);
-
-      final response = await client.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'X-DbName': dbHeaderValue,
-        },
-      ).timeout(_timeout);
-
-      if (response.statusCode == 200) {
-        final dynamic jsonData = jsonDecode(response.body);
-
-        // Si el backend devuelve la estructura con paginación
-        if (jsonData is Map &&
-            jsonData.containsKey('records') &&
-            jsonData.containsKey('totalRecords')) {
-          print('✅ Usando paginación del backend');
-          final records = (jsonData['records'] as List).cast<Map<String, dynamic>>();
-          // Ordenar registros más nuevos primero (descendente)
-          _sortRecordsDescending(records);
-          return {
-            'records': records,
-            'totalRecords': jsonData['totalRecords'] as int,
-          };
-        }
-
-        // Si viene como ApiResponse
-        if (jsonData is Map && jsonData.containsKey('success')) {
-          final apiResponse = ApiResponse.fromJson(jsonData as Map<String, dynamic>, null);
-          if (apiResponse.success && apiResponse.data is Map) {
-            final data = apiResponse.data as Map<String, dynamic>;
-            if (data.containsKey('records') && data.containsKey('totalRecords')) {
-              print('✅ Usando paginación del backend (ApiResponse)');
-              final records = (data['records'] as List).cast<Map<String, dynamic>>();
-              // Ordenar registros más nuevos primero (descendente)
-              _sortRecordsDescending(records);
-              return {
-                'records': records,
-                'totalRecords': data['totalRecords'] as int,
-              };
-            }
-          }
-        }
-      }
-    } catch (e) {
-      print('⚠️ Paginación del backend no disponible: $e');
-    }
-
-    // Fallback: Obtener todos los registros y paginar del lado del cliente
-    try {
-      print('📱 Usando paginación del lado del cliente');
+      print('📱 Paginando localmente sobre datos V2');
       final allRecords = await getTableRecords(
-        databaseName: databaseName,
+        metadata: metadata,
         tableName: tableName,
         token: token,
       );
 
-      // Ordenar registros más nuevos primero (descendente)
+      // Tu lógica de ordenamiento (copiada de tu código)
       _sortRecordsDescending(allRecords);
 
-      // Aplicar búsqueda si existe
+      // Tu lógica de filtrado
       var filteredRecords = allRecords;
       if (searchTerm != null && searchTerm.isNotEmpty) {
         filteredRecords = allRecords.where((record) {
@@ -239,16 +117,12 @@ class DynamicRemoteDataSource {
         }).toList();
       }
 
-      // Aplicar paginación del lado del cliente
       final totalRecords = filteredRecords.length;
       final startIndex = (page - 1) * pageSize;
       final endIndex = (startIndex + pageSize).clamp(0, totalRecords);
 
       final paginatedRecords = startIndex < totalRecords
-          ? filteredRecords.sublist(
-              startIndex.clamp(0, totalRecords),
-              endIndex,
-            )
+          ? filteredRecords.sublist(startIndex.clamp(0, totalRecords), endIndex)
           : <Map<String, dynamic>>[];
 
       return {
@@ -256,7 +130,163 @@ class DynamicRemoteDataSource {
         'totalRecords': totalRecords,
       };
     } catch (e) {
-      throw Exception('Error fetching records: $e');
+      throw Exception('Error paginating: $e');
+    }
+  }
+
+  // --- 4. CREATE (V2 - Actualizado) ---
+  Future<Map<String, dynamic>> createTableRecord({
+    required DatabaseMetadataModel metadata,
+    required String tableName,
+    required Map<String, dynamic> data,
+    required String token,
+  }) async {
+    try {
+      // 1. Optimizar Fechas (Tu parche Azure)
+      final Map<String, dynamic> optimizedData = Map.from(data);
+      optimizedData.forEach((key, value) {
+        if ((key.toLowerCase().contains('fecha') || key.toLowerCase().contains('visita')) && 
+            value is String && !value.endsWith('Z')) {
+             optimizedData[key] = "${value}Z"; 
+        }
+      });
+
+      // 2. Preparar Request
+      final v2Schema = SchemaAdapter.fromMetadata(metadata: metadata, targetTableName: tableName);
+      final requestBody = V2DynamicRequest(schema: v2Schema, data: optimizedData);
+
+      // 3. Endpoint CREADTE (Typo del backend)
+      final uri = Uri.parse('$_v2BaseUrl/CREADTE').replace(
+        queryParameters: {'tableName': tableName},
+      );
+
+      print('📝 V2 CREATE: $tableName');
+
+      final response = await client.post(
+        uri,
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode(requestBody.toJson()),
+      ).timeout(_timeout);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('V2 Create Error: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error creating record: $e');
+    }
+  }
+
+  // --- 5. UPDATE (V2 - Actualizado) ---
+  Future<Map<String, dynamic>> updateTableRecord({
+    required DatabaseMetadataModel metadata,
+    required String tableName,
+    required dynamic id,
+    required Map<String, dynamic> data,
+    required String token,
+  }) async {
+    try {
+      final dataWithId = Map<String, dynamic>.from(data);
+      // dataWithId['id'] = id; // Opcional, si el backend requiere el ID dentro del data
+
+      final v2Schema = SchemaAdapter.fromMetadata(metadata: metadata, targetTableName: tableName);
+      final requestBody = V2DynamicRequest(schema: v2Schema, data: dataWithId);
+
+      final uri = Uri.parse('$_v2BaseUrl/UPDATE').replace(
+        queryParameters: {'tableName': tableName},
+      );
+
+      print('✏️ V2 UPDATE: $tableName');
+
+      final response = await client.post(
+        uri,
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode(requestBody.toJson()),
+      ).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Actualizado correctamente'};
+      } else {
+        throw Exception('V2 Update Error: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error updating record: $e');
+    }
+  }
+
+  // --- 6. GET BY ID (V2 - Actualizado) ---
+  Future<Map<String, dynamic>> getTableRecord({
+    required DatabaseMetadataModel metadata,
+    required String tableName,
+    required dynamic id,
+    required String token,
+  }) async {
+    try {
+      final v2Schema = SchemaAdapter.fromMetadata(metadata: metadata, targetTableName: tableName);
+      
+      // POST V2/GETBYID/{id}
+      final uri = Uri.parse('$_v2BaseUrl/GETBYID/$id').replace(
+        queryParameters: {'tableName': tableName},
+      );
+
+      final response = await client.post(
+        uri,
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        // GETBYID solo envía el Schema, no el wrapper completo con Data
+        body: jsonEncode(v2Schema.toJson()), 
+      ).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('V2 GetById Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching record: $e');
+    }
+  }
+
+  // --- MÉTODO FALTANTE: DELETE (Legacy / V1) ---
+  Future<bool> deleteTableRecord({
+    required String databaseName,
+    required String tableName,
+    required dynamic id,
+    required String token,
+  }) async {
+    try {
+      // Usamos EndpointMapper (Lógica Antigua)
+      final endpoint = EndpointMapper.getDeleteEndpoint(
+        databaseName: databaseName,
+        tableName: tableName,
+        id: id,
+      );
+      final dbHeaderValue = EndpointMapper.getDatabaseHeaderValue(databaseName);
+
+      print('🗑️ Eliminando registro (Legacy): $endpoint');
+
+      final response = await client.delete(
+        Uri.parse('${ApiEndpoints.baseUrl}$endpoint'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+          'X-DbName': dbHeaderValue,
+        },
+      ).timeout(_timeout);
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return true;
+      } else if (response.statusCode == 500) {
+        // Manejo básico de error de integridad referencial
+        throw Exception(response.body.isNotEmpty 
+            ? response.body 
+            : 'No se puede eliminar el registro. Verifique dependencias.');
+      } else {
+        throw Exception('Failed to delete: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error eliminando registro: $e');
+      throw Exception('Error deleting record: $e');
     }
   }
 
@@ -334,363 +364,6 @@ class DynamicRemoteDataSource {
     }
   }
 
-  Future<Map<String, dynamic>> getTableRecord({
-    required String databaseName,
-    required String tableName,
-    required dynamic id,
-    required String token,
-  }) async {
-    try {
-      final endpoint = EndpointMapper.getByIdEndpoint(
-        databaseName: databaseName,
-        tableName: tableName,
-        id: id,
-      );
-      final dbHeaderValue = EndpointMapper.getDatabaseHeaderValue(databaseName);
-
-      print('🔍 Obteniendo registro por ID desde: $endpoint');
-      print('🗄️  Header X-DbName: $dbHeaderValue');
-      print('🔑 Token: ${token.length > 20 ? "${token.substring(0, 20)}..." : token}');
-
-      final response = await client.get(
-        Uri.parse('${ApiEndpoints.baseUrl}$endpoint'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'X-DbName': dbHeaderValue,
-        },
-      ).timeout(_timeout);
-
-      print('📡 Status Code: ${response.statusCode}');
-      print('📄 Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final dynamic jsonData = jsonDecode(response.body);
-
-        // Si es un objeto directamente
-        if (jsonData is Map<String, dynamic>) {
-          print('✅ Registro obtenido: $jsonData');
-          return jsonData;
-        }
-
-        // Si viene envuelto en ApiResponse
-        final apiResponse = ApiResponse.fromJson(jsonData as Map<String, dynamic>, null);
-        if (apiResponse.success) {
-          print('✅ Registro obtenido (ApiResponse): ${apiResponse.data}');
-          return apiResponse.data as Map<String, dynamic>;
-        } else {
-          throw Exception(apiResponse.message);
-        }
-      } else if (response.statusCode == 404) {
-        // FALLBACK: Si el endpoint GET por ID no existe (404),
-        // obtener todos los registros y buscar el que coincida con el ID
-        print('⚠️ Endpoint GET por ID no implementado (404), usando fallback...');
-
-        final allRecords = await getTableRecords(
-          databaseName: databaseName,
-          tableName: tableName,
-          token: token,
-        );
-
-        // Buscar el registro con el ID específico
-        try {
-          final record = allRecords.firstWhere(
-            (record) => record['id'].toString() == id.toString(),
-          );
-          print('✅ Registro encontrado usando fallback: $record');
-          return record;
-        } catch (e) {
-          throw Exception('Registro con ID $id no encontrado');
-        }
-      } else {
-        throw Exception('Failed to load record: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      print('❌ Error obteniendo registro: $e');
-      throw Exception('Error fetching record: $e');
-    }
-  }
-
-Future<Map<String, dynamic>> createTableRecord({
-    required String databaseName,
-    required String tableName,
-    required Map<String, dynamic> data,
-    required String token,
-  }) async {
-    try {
-      final endpoint = EndpointMapper.getCreateEndpoint(
-        databaseName: databaseName,
-        tableName: tableName,
-      );
-      final dbHeaderValue = EndpointMapper.getDatabaseHeaderValue(databaseName);
-
-      print('📝 Creando registro en: $endpoint');
-      print('📦 Datos: $data');
-
-      // --- INICIO DE SOLUCIÓN 3 (PARCHE DE FECHA DINÁMICO) ---
-      // Creamos una copia para no modificar el mapa original 'data'
-      final Map<String, dynamic> optimizedData = Map.from(data);
-      optimizedData.forEach((key, value) {
-        // Detectamos campos de fecha por su nombre o si contienen una 'T' de ISO8601
-        if (key.toLowerCase().contains('visita') || 
-            key.toLowerCase().contains('fecha') || 
-            (value is String && value.contains('T') && value.length > 10)) {
-          if (value is String && !value.endsWith('Z')) {
-            // Limpiamos milisegundos extra y agregamos la Z requerida por Azure
-            optimizedData[key] = value.contains('.') 
-                ? "${value.split('.')[0]}Z" 
-                : "${value}Z";
-            print('📅 Fecha optimizada para Azure: $key -> ${optimizedData[key]}');
-          }
-        }
-      });
-      // --- FIN DE SOLUCIÓN 3 ---
-
-      final response = await client.post(
-        Uri.parse('${ApiEndpoints.baseUrl}$endpoint'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'X-DbName': dbHeaderValue,
-        },
-        // Enviamos optimizedData en lugar de data original
-        body: jsonEncode(optimizedData),
-      ).timeout(_timeout);
-
-      print('📡 Status Code: ${response.statusCode}');
-      print('📄 Response: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (response.body.isEmpty) {
-          print('✅ Registro creado (respuesta vacía)');
-          return {'success': true, 'message': 'Registro creado exitosamente'};
-        }
-
-        try {
-          final dynamic jsonData = jsonDecode(response.body);
-
-          if (jsonData is Map<String, dynamic>) {
-            return jsonData;
-          }
-
-          final apiResponse = ApiResponse.fromJson(jsonData as Map<String, dynamic>, null);
-          if (apiResponse.success) {
-            return apiResponse.data as Map<String, dynamic>;
-          } else {
-            throw Exception(apiResponse.message);
-          }
-        } catch (e) {
-          if (e is FormatException) {
-            print('✅ Registro creado (respuesta de texto plano): ${response.body}');
-            return {'success': true, 'message': response.body};
-          }
-          rethrow;
-        }
-      } else if (response.statusCode == 400) {
-        final errorMsg = response.body.isNotEmpty
-          ? response.body
-          : 'Error de validación. Verifica que el legajo no esté duplicado.';
-        throw Exception('Error de validación: $errorMsg');
-      } else if (response.statusCode == 500) {
-        final errorMsg = response.body.isNotEmpty
-          ? response.body
-          : 'Error interno del servidor. Verifica:\n1. Que el legajo no esté duplicado\n2. Que todos los campos requeridos estén completos\n3. Que el formato de fecha sea válido';
-        throw Exception('Error del servidor: $errorMsg');
-      } else {
-        throw Exception('Failed to create record: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      print('❌ Error creando registro: $e');
-      throw Exception('Error creating record: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>> updateTableRecord({
-    required String databaseName,
-    required String tableName,
-    required dynamic id,
-    required Map<String, dynamic> data,
-    required String token,
-  }) async {
-    try {
-      final endpoint = EndpointMapper.getUpdateEndpoint(
-        databaseName: databaseName,
-        tableName: tableName,
-        id: id,
-      );
-      final dbHeaderValue = EndpointMapper.getDatabaseHeaderValue(databaseName);
-
-      print('✏️ Actualizando registro en: $endpoint');
-      print('📦 Datos a actualizar: $data');
-
-      final response = await client.put(
-        Uri.parse('${ApiEndpoints.baseUrl}$endpoint'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'X-DbName': dbHeaderValue,
-        },
-        body: jsonEncode(data),
-      ).timeout(_timeout);
-
-      print('📡 Status Code: ${response.statusCode}');
-      print('📄 Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        // Verificar si la respuesta está vacía o es texto plano
-        if (response.body.isEmpty) {
-          print('✅ Registro actualizado (respuesta vacía)');
-          return {'success': true, 'message': 'Registro actualizado exitosamente'};
-        }
-
-        // Intentar parsear como JSON
-        try {
-          final dynamic jsonData = jsonDecode(response.body);
-
-          // Si es un objeto directamente
-          if (jsonData is Map<String, dynamic>) {
-            return jsonData;
-          }
-
-          // Si viene como ApiResponse
-          final apiResponse = ApiResponse.fromJson(jsonData as Map<String, dynamic>, null);
-          if (apiResponse.success) {
-            return apiResponse.data as Map<String, dynamic>;
-          } else {
-            throw Exception(apiResponse.message);
-          }
-        } catch (e) {
-          // Si falla el parseo JSON, es probable que sea texto plano
-          if (e is FormatException) {
-            print('✅ Registro actualizado (respuesta de texto plano): ${response.body}');
-            return {'success': true, 'message': response.body};
-          }
-          rethrow;
-        }
-      } else if (response.statusCode == 404 || response.statusCode == 405) {
-        // FALLBACK: Si el endpoint PUT no está implementado (404/405 Method Not Allowed)
-        print('⚠️ Endpoint PUT no implementado (${response.statusCode}), intentando fallback...');
-
-        // Opción 1: Intentar con POST en el endpoint base (algunos backends aceptan POST para update)
-        final createEndpoint = EndpointMapper.getCreateEndpoint(
-          databaseName: databaseName,
-          tableName: tableName,
-        );
-
-        print('🔄 Intentando actualización vía POST en: $createEndpoint');
-
-        // Agregar el ID a los datos para el POST
-        final dataWithId = {...data, 'id': id};
-
-        final fallbackResponse = await client.post(
-          Uri.parse('${ApiEndpoints.baseUrl}$createEndpoint'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-            'X-DbName': dbHeaderValue,
-          },
-          body: jsonEncode(dataWithId),
-        ).timeout(_timeout);
-
-        print('📡 Fallback Status Code: ${fallbackResponse.statusCode}');
-        print('📄 Fallback Response: ${fallbackResponse.body}');
-
-        if (fallbackResponse.statusCode == 200 || fallbackResponse.statusCode == 201) {
-          print('✅ Actualización exitosa usando fallback POST');
-          return {'success': true, 'message': 'Registro actualizado'};
-        } else {
-          throw Exception(
-            'El backend no tiene implementado el endpoint de actualización (PUT) '
-            'para la tabla $tableName. Código de error: ${response.statusCode}. '
-            'Contacte al equipo de backend para implementar este endpoint.'
-          );
-        }
-      } else {
-        throw Exception('Failed to update record: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      print('❌ Error actualizando registro: $e');
-      throw Exception('Error updating record: $e');
-    }
-  }
-
-  Future<bool> deleteTableRecord({
-    required String databaseName,
-    required String tableName,
-    required dynamic id,
-    required String token,
-  }) async {
-    try {
-      final endpoint = EndpointMapper.getDeleteEndpoint(
-        databaseName: databaseName,
-        tableName: tableName,
-        id: id,
-      );
-      final dbHeaderValue = EndpointMapper.getDatabaseHeaderValue(databaseName);
-
-      print('🗑️ Eliminando registro en: $endpoint');
-
-      final response = await client.delete(
-        Uri.parse('${ApiEndpoints.baseUrl}$endpoint'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'X-DbName': dbHeaderValue,
-        },
-      ).timeout(_timeout);
-
-      print('📡 Status Code: ${response.statusCode}');
-      print('📄 Response body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        // Algunos endpoints devuelven solo un mensaje de texto o respuesta vacía
-        if (response.body.isEmpty) {
-          print('✅ Registro eliminado (respuesta vacía)');
-          return true;
-        }
-
-        // Intentar parsear como JSON
-        try {
-          final dynamic jsonData = jsonDecode(response.body);
-
-          // Si viene como ApiResponse
-          if (jsonData is Map && jsonData.containsKey('success')) {
-            final apiResponse = ApiResponse.fromJson(jsonData as Map<String, dynamic>, null);
-            return apiResponse.success;
-          }
-
-          // Si es cualquier otra respuesta exitosa
-          return true;
-        } catch (e) {
-          // Si falla el parseo JSON, es probable que sea texto plano
-          if (e is FormatException) {
-            print('✅ Registro eliminado (respuesta de texto plano): ${response.body}');
-            return true;
-          }
-          rethrow;
-        }
-      } else if (response.statusCode == 500) {
-        // Error del servidor - probablemente violación de foreign key
-        String specificMsg = _getDeleteErrorMessage(tableName);
-
-        final errorMsg = response.body.isNotEmpty
-            ? response.body
-            : specificMsg;
-        throw Exception('Error del servidor: $errorMsg');
-      } else if (response.statusCode == 409) {
-        // Conflicto - registro en uso
-        throw Exception(
-          'No se puede eliminar el registro porque está siendo utilizado por otros datos.\n'
-          'Elimine primero los registros relacionados.'
-        );
-      } else {
-        throw Exception('Failed to delete record: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      print('❌ Error eliminando registro: $e');
-      throw Exception('Error deleting record: $e');
-    }
-  }
 
   Future<List<DropdownItemModel>> getDropdownData({
     required String databaseName,

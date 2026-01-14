@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/config/routes.dart';
-import 'package:lottie/lottie.dart';
+import 'package:herramienta_case/core/config/app_build_config.dart';
+import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
+import 'package:herramienta_case/modules/database_selector/data/models/database_info_model.dart';
+// import 'package:lottie/lottie.dart'; // Descomenta si usas lottie en el futuro
 
 /// Pantalla de inicio profesional con animación de carga
 class SplashScreen extends StatefulWidget {
@@ -98,8 +102,8 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  void _startSplashSequence() async {
-    // Iniciar animaciones en secuencia
+void _startSplashSequence() async {
+    // Iniciar animaciones en secuencia (Visual)
     await Future.delayed(const Duration(milliseconds: 200));
     _fadeController.forward();
     _scaleController.forward();
@@ -107,15 +111,45 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 400));
     _progressController.forward();
 
-    // Iniciar animaciones continuas después de la entrada
+    // Iniciar animaciones continuas
     await Future.delayed(const Duration(milliseconds: 600));
     _rotationController.repeat();
     _pulseController.repeat(reverse: true);
 
-    // Esperar a que termine la secuencia y navegar
+    // Esperar a que termine la secuencia estética
     await Future.delayed(const Duration(milliseconds: 2200));
 
-    if (mounted) {
+    if (!mounted) return;
+
+    // ========== LÓGICA DE ARRANQUE INTELIGENTE (V2) ==========
+    
+    // 1. Verificamos si la App fue compilada para un cliente específico
+    if (AppBuildConfig.isPreConfigured) {
+      
+      // MODO PRE-CONFIGURADO: (Ej: APK de "Productos")
+      final databaseName = AppBuildConfig.defaultDatabaseName;
+      debugPrint('🎯 Modo Pre-Configurado detectado: Base "$databaseName"');
+
+      // 2. Inyectamos la base de datos en el Provider Global
+      final dbProvider = context.read<DatabaseSelectorProvider>();
+      
+      // --- CORRECCIÓN AQUÍ ---
+      // Como el provider pide un OBJETO DatabaseInfoModel, creamos uno temporal 
+      // usando el nombre que tenemos. El ID es irrelevante en este punto (ponemos 0).
+      dbProvider.selectDatabase(
+        DatabaseInfoModel(
+          id: 0, // ID Dummy (no se usa para conectar, solo importa el nombre)
+          name: databaseName, 
+          description: 'Pre-configured App',
+        )
+      ); 
+
+      // 3. Navegación Directa al Login
+      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+      
+    } else {
+      // MODO GENÉRICO: (Desarrollo o App Maestra)
+      debugPrint('🔄 Modo Genérico: Mostrando selector de bases de datos');
       Navigator.of(context).pushReplacementNamed(AppRoutes.selectDatabase);
     }
   }
@@ -141,7 +175,7 @@ class _SplashScreenState extends State<SplashScreen>
             colors: [
               AppColors.primaryLight, // Azure Blue claro
               AppColors.primary, // Azure Blue principal
-              AppColors.primaryDark, // Azure Blue oscuro - coherencia cromática total
+              AppColors.primaryDark, // Azure Blue oscuro
             ],
           ),
         ),
@@ -293,5 +327,4 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
-
 }

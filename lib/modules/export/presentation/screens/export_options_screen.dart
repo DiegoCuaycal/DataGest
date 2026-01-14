@@ -278,15 +278,17 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
     final authProvider = context.read<AuthProvider>();
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final exportProvider = context.read<ExportProvider>();
+    final metadataProvider = context.read<MetadataProvider>(); // <--- 1. OBTENER PROVIDER DE METADATA
 
     final token = authProvider.currentUser?.token ?? '';
     final databaseName = dbProvider.currentDatabaseName ?? '';
+    final metadata = metadataProvider.metadata; // <--- 2. OBTENER METADATA
 
-    if (token.isEmpty || databaseName.isEmpty) {
+    if (token.isEmpty || databaseName.isEmpty || metadata == null) {
       if (context.mounted) {
         NotificationService.showError(
           context,
-          'Error: No se pudo obtener la información de autenticación',
+          'Error: No se pudo obtener la información necesaria (Token, DB o Metadata)',
         );
       }
       return;
@@ -311,13 +313,13 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
 
     try {
       // Exportar
-      // TEMPORAL: Activar modo de prueba por defecto hasta que se arregle el backend
       final results = await exportProvider.exportMultipleTables(
+        metadata: metadata, // <--- 3. PASAR METADATA (CORRECCIÓN)
         databaseName: databaseName,
         tables: tablesToExport,
         baseConfig: config,
         token: token,
-        useMockData: true, // CAMBIAR A false cuando el backend funcione
+        useMockData: false, // Puedes poner true si quieres probar sin backend V2
       );
 
       if (!context.mounted) return;

@@ -35,26 +35,14 @@ class DatabaseRemoteDataSource {
     }
   }
 
-  // Mock data for testing without backend
+  /// Mock data for testing without backend (SOLO PARA DEBUG)
+  /// NOTA: Este método solo se usa si falla la conexión con el API
   Future<List<DatabaseInfoModel>> getMockDatabases() async {
-    await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
+    // Simular delay de red
+    await Future.delayed(const Duration(seconds: 1));
 
-    return [
-      DatabaseInfoModel(
-        id: 1,
-        name: 'ToList',
-        description: 'Gestión de tareas',
-      ),
-      DatabaseInfoModel(
-        id: 2,
-        name: 'Inventario',
-        description: 'Control de inventario',
-      ),
-      DatabaseInfoModel(
-        id: 3,
-        name: 'Ventas',
-        description: 'Sistema de ventas',
-      ),
-    ];
+    // IMPORTANTE: Esta lista es solo para desarrollo/debug
+    // En producción, SIEMPRE se debe usar getAvailableDatabases()
+    return [];
   }
 }
