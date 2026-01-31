@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/dropdown_item_model.dart';
+import '../../data/models/database_metadata_model.dart'; // <--- IMPORTAR METADATA
 import '../../data/repositories/dynamic_crud_repository.dart';
-// IMPORTANTE: Importar el modelo de metadata
-import '../../data/models/database_metadata_model.dart';
 
 class DynamicCrudProvider extends ChangeNotifier {
   final DynamicCrudRepository repository;
@@ -95,8 +94,10 @@ class DynamicCrudProvider extends ChangeNotifier {
     _totalPages = 0;
   }
 
+  // --- MÉTODOS CRUD ACTUALIZADOS (V2) ---
+
   Future<void> loadTableRecords({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required String token,
@@ -121,7 +122,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       final result = await repository.getTableRecordsPaginated(
-        metadata: metadata, // <--- Pasamos metadata al repo
+        metadata: metadata, // <--- PASAR METADATA AL REPO
         databaseName: databaseName,
         tableName: tableName,
         token: token,
@@ -151,7 +152,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
   /// Cargar más registros (infinite scroll)
   Future<void> loadMoreRecords({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required String token,
@@ -167,7 +168,7 @@ class DynamicCrudProvider extends ChangeNotifier {
       _currentPage++;
 
       final result = await repository.getTableRecordsPaginated(
-        metadata: metadata, // <--- Pasamos metadata
+        metadata: metadata, // <--- PASAR METADATA
         databaseName: databaseName,
         tableName: tableName,
         token: token,
@@ -195,7 +196,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
   /// Load all records without pagination (for backwards compatibility)
   Future<void> loadAllTableRecords({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required String token,
@@ -206,7 +207,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       _records = await repository.getTableRecords(
-        metadata: metadata, // <--- Pasamos metadata
+        metadata: metadata, // <--- PASAR METADATA
         databaseName: databaseName,
         tableName: tableName,
         token: token,
@@ -223,7 +224,7 @@ class DynamicCrudProvider extends ChangeNotifier {
   }
 
   Future<void> loadTableRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -235,7 +236,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       _currentRecord = await repository.getTableRecord(
-        metadata: metadata, // <--- Pasamos metadata
+        metadata: metadata, // <--- PASAR METADATA
         databaseName: databaseName,
         tableName: tableName,
         id: id,
@@ -254,7 +255,7 @@ class DynamicCrudProvider extends ChangeNotifier {
   }
 
   Future<bool> createRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required Map<String, dynamic> data,
@@ -266,7 +267,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       await repository.createTableRecord(
-        metadata: metadata, // <--- Pasamos metadata
+        metadata: metadata, // <--- PASAR METADATA
         databaseName: databaseName,
         tableName: tableName,
         data: data,
@@ -284,7 +285,7 @@ class DynamicCrudProvider extends ChangeNotifier {
   }
 
   Future<bool> updateRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -297,7 +298,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       await repository.updateTableRecord(
-        metadata: metadata, // <--- Pasamos metadata
+        metadata: metadata, // <--- PASAR METADATA
         databaseName: databaseName,
         tableName: tableName,
         id: id,
@@ -315,23 +316,12 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
-  /// Limpia mensajes de error técnicos para mostrar solo información útil al usuario
-  String _cleanErrorMessage(String errorMessage) {
-    // Remover prefijos técnicos como "Exception:", "Repository error:", etc.
-    String cleaned = errorMessage
-        .replaceAll('Exception: Repository error: Exception: ', '')
-        .replaceAll('Exception: Error deleting record: Exception: ', '')
-        .replaceAll('Exception: ', '')
-        .replaceAll('Repository error: ', '')
-        .replaceAll('Error deleting record: ', '')
-        .replaceAll('Error del servidor: ', '')
-        .trim();
-
-    return cleaned;
-  }
-
+  // DELETE y DROPDOWN siguen igual (V1 Legacy)
+  // Pero agregamos metadata a la firma de deleteRecord por consistencia si quieres, 
+  // aunque el repo lo ignore en delete.
+  
   Future<bool> deleteRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO
+    // required DatabaseMetadataModel metadata, // Opcional aquí
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -343,17 +333,17 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       final result = await repository.deleteTableRecord(
-        metadata: metadata, // <--- Pasamos metadata
+        // metadata: metadata, // Si decides pasarlo
         databaseName: databaseName,
         tableName: tableName,
         id: id,
         token: token,
+        metadata: DatabaseMetadataModel(databaseName: databaseName, tables: [], columns: [], pkInfo: [], fkInfo: [], indexes: [], views: []), // Dummy metadata para cumplir con repo si es necesario
       );
       _isLoading = false;
       notifyListeners();
       return result;
     } catch (e) {
-      // Limpiar mensaje de error antes de mostrarlo al usuario
       _errorMessage = _cleanErrorMessage(e.toString());
       _isLoading = false;
       notifyListeners();
@@ -368,8 +358,6 @@ class DynamicCrudProvider extends ChangeNotifier {
     List<String>? displayColumns,
   }) async {
     try {
-      // NOTA: Los dropdowns siguen usando la lógica antigua (no V2), 
-      // por lo que NO necesitamos metadata aquí.
       return await repository.getDropdownData(
         databaseName: databaseName,
         tableName: tableName,
@@ -382,6 +370,7 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
+  // Utils
   void clearRecords() {
     _records = [];
     _currentRecord = null;
@@ -392,5 +381,17 @@ class DynamicCrudProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  String _cleanErrorMessage(String errorMessage) {
+    String cleaned = errorMessage
+        .replaceAll('Exception: Repository error: Exception: ', '')
+        .replaceAll('Exception: Error deleting record: Exception: ', '')
+        .replaceAll('Exception: ', '')
+        .replaceAll('Repository error: ', '')
+        .replaceAll('Error deleting record: ', '')
+        .replaceAll('Error del servidor: ', '')
+        .trim();
+    return cleaned;
   }
 }

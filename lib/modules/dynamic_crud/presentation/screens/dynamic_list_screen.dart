@@ -47,17 +47,20 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final authProvider = context.read<AuthProvider>();
-    final metadataProvider = context.read<MetadataProvider>(); // Importante: Leer Metadata
+    final metadataProvider = context.read<MetadataProvider>(); // <--- 1. OBTENER METADATA
 
-    // Validar que tengamos metadata antes de llamar (evita crash)
-    if (metadataProvider.metadata == null) return;
+    // Validar que exista la metadata antes de intentar cargar
+    if (metadataProvider.metadata == null) {
+        print("⚠️ Error: Intentando cargar lista sin metadata disponible.");
+        return;
+    }
 
     if (dbProvider.currentDatabaseName != null) {
       final token = authProvider.currentUser?.token ?? '';
       print('🔐 Token del usuario: ${token.isEmpty ? "VACÍO" : "${token.substring(0, 20)}..."}');
 
       crudProvider.loadTableRecords(
-        metadata: metadataProvider.metadata!, // <--- NUEVO: Pasamos la metadata
+        metadata: metadataProvider.metadata!, // <--- 2. PASAR METADATA (CORRECCIÓN)
         databaseName: dbProvider.currentDatabaseName!,
         tableName: widget.tableName,
         token: token,
@@ -81,27 +84,25 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final authProvider = context.read<AuthProvider>();
-    final metadataProvider = context.read<MetadataProvider>();
+    final metadataProvider = context.read<MetadataProvider>(); // <--- 1. OBTENER METADATA
 
-    if (metadataProvider.metadata == null) return;
-
-    if (dbProvider.currentDatabaseName != null) {
+    if (dbProvider.currentDatabaseName != null && metadataProvider.metadata != null) {
       crudProvider.setSearchTerm(searchTerm);
       crudProvider.loadTableRecords(
-        metadata: metadataProvider.metadata!, // <--- NUEVO: Pasamos la metadata
+        metadata: metadataProvider.metadata!, // <--- 2. PASAR METADATA (CORRECCIÓN)
         databaseName: dbProvider.currentDatabaseName!,
         tableName: widget.tableName,
         token: authProvider.currentUser?.token ?? '',
-        resetData: true, // Resetear datos al buscar
+        resetData: true, 
       );
     }
   }
 
   /// 🚨 FUNCIÓN SABUESO 🚨
+  /// Busca el valor de una columna aunque el nombre venga diferente (Mayúsculas/Minúsculas)
   dynamic _getValueFuzzy(Map<String, dynamic> record, String columnName) {
     if (record.containsKey(columnName)) return record[columnName];
     final cleanCol = columnName.replaceAll('_', '').toLowerCase();
-
     for (var key in record.keys) {
       final cleanKey = key.replaceAll('_', '').toLowerCase();
       if (cleanKey == cleanCol) {
@@ -111,8 +112,10 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     return null;
   }
 
+  /// FUNCIÓN PARA MOSTRAR INFORMACIÓN DESCRIPTIVA DE FOREIGN KEYS
   String _getDisplayValue(Map<String, dynamic> record, String columnName) {
     final value = _getValueFuzzy(record, columnName);
+
     if (value == null || value.toString().trim().isEmpty) {
       return '';
     }
@@ -121,22 +124,11 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     if (lowerColumnName.endsWith('_id')) {
       final baseName = lowerColumnName.replaceAll('_id', '');
       final possibleFields = [
-        '${baseName}_nombre',
-        '${baseName}_nombres',
-        '${baseName}Nombre',
-        '${baseName}Nombres',
-        '${baseName}nombre',
-        '${baseName}nombres',
-        '${baseName}nombre',
-        '${baseName}Nombre',
-        'nombre_$baseName',
-        'nombres_$baseName',
-        'Nombre_$baseName',
-        'Nombres_$baseName',
-        '${baseName}_especialidad',
-        '${baseName}Especialidad',
-        '${baseName}_descripcion',
-        '${baseName}Descripcion',
+        '${baseName}_nombre', '${baseName}_nombres', '${baseName}Nombre', '${baseName}Nombres',
+        '${baseName}nombre', '${baseName}nombres', '${baseName}nombre', '${baseName}Nombre',
+        'nombre_$baseName', 'nombres_$baseName', 'Nombre_$baseName', 'Nombres_$baseName',
+        '${baseName}_especialidad', '${baseName}Especialidad',
+        '${baseName}_descripcion', '${baseName}Descripcion',
       ];
 
       for (var field in possibleFields) {
@@ -177,10 +169,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                 if (provider.totalRecords > 0) {
                   return Text(
                     '${provider.records.length} de ${provider.totalRecords}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.normal,
-                    ),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
                   );
                 }
                 return const SizedBox.shrink();
@@ -201,35 +190,16 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
       ),
       body: Column(
         children: [
-          // Barra de búsqueda compacta
           SearchFilterBar(
             onSearchChanged: _handleSearchChanged,
             onRefresh: _loadData,
             hintText: 'Buscar...',
           ),
-
-          // Contenido principal
           Expanded(
             child: Consumer<DynamicCrudProvider>(
               builder: (context, provider, child) {
                 if (provider.isLoading && provider.records.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
-                        const SizedBox(height: AppStyles.paddingMedium),
-                        Text(
-                          AppStrings.loadingRecords,
-                          style: AppStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
+                  return const Center(child: CircularProgressIndicator(color: AppColors.primary));
                 }
 
                 if (provider.errorMessage != null && provider.records.isEmpty) {
@@ -239,48 +209,15 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(AppStyles.paddingLarge),
-                            decoration: BoxDecoration(
-                              color: AppColors.error.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              AppIcons.error,
-                              size: 64,
-                              color: AppColors.error,
-                            ),
-                          ),
+                          const Icon(AppIcons.error, size: 64, color: AppColors.error),
                           const SizedBox(height: AppStyles.paddingLarge),
-                          Text(
-                            AppStrings.errorLoadingRecords,
-                            style: AppStyles.heading3,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppStyles.paddingSmall),
-                          Text(
-                            provider.errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: AppStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
+                          Text(AppStrings.errorLoadingRecords, style: AppStyles.heading3),
+                          Text(provider.errorMessage!, textAlign: TextAlign.center),
                           const SizedBox(height: AppStyles.paddingLarge),
                           ElevatedButton.icon(
                             onPressed: _loadData,
                             icon: const Icon(AppIcons.refresh),
                             label: const Text(AppStrings.retry),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: AppColors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppStyles.paddingLarge,
-                                vertical: AppStyles.paddingMedium,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                              ),
-                            ),
                           ),
                         ],
                       ),
@@ -293,42 +230,17 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(AppStyles.paddingLarge),
-                          decoration: BoxDecoration(
-                            color: AppColors.textSecondary.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            AppIcons.empty,
-                            size: 64,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
+                        const Icon(AppIcons.empty, size: 64, color: AppColors.textSecondary),
                         const SizedBox(height: AppStyles.paddingLarge),
                         Text(
-                          provider.searchTerm.isEmpty
-                              ? AppStrings.noRecords
-                              : 'No se encontraron resultados',
-                          style: AppStyles.heading3.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: AppStyles.paddingSmall),
-                        Text(
-                          provider.searchTerm.isEmpty
-                              ? AppStrings.addNewRecord
-                              : 'Intenta con otros términos de búsqueda',
-                          style: AppStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                          provider.searchTerm.isEmpty ? AppStrings.noRecords : 'No se encontraron resultados',
+                          style: AppStyles.heading3.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                   );
                 }
 
-                // Lista con paginación
                 return Column(
                   children: [
                     Expanded(
@@ -337,12 +249,7 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                           _loadData();
                         },
                         child: ListView.builder(
-                          padding: const EdgeInsets.only(
-                            left: AppStyles.paddingMedium,
-                            right: AppStyles.paddingMedium,
-                            top: AppStyles.paddingSmall,
-                            bottom: AppStyles.paddingMedium,
-                          ),
+                          padding: const EdgeInsets.all(AppStyles.paddingMedium),
                           itemCount: provider.records.length,
                           itemBuilder: (context, index) {
                             final record = provider.records[index];
@@ -352,117 +259,83 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
                             return Card(
                               margin: const EdgeInsets.only(bottom: AppStyles.paddingSmall),
                               elevation: 1,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppStyles.radiusMedium)),
                               child: Padding(
-                                  padding: const EdgeInsets.all(AppStyles.paddingMedium),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      ...columns
-                                          .where((col) {
-                                            final name = col.name.toLowerCase();
-                                            return name != pk?.toLowerCase() &&
-                                                !name.contains('created_at') &&
-                                                !name.contains('updated_at') &&
-                                                !name.contains('deleted_at');
-                                          })
-                                          .take(4) 
-                                          .map((col) {
-                                            final displayValue = _getDisplayValue(record, col.name);
+                                padding: const EdgeInsets.all(AppStyles.paddingMedium),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ...columns
+                                        .where((col) {
+                                          final name = col.name.toLowerCase();
+                                          return name != pk?.toLowerCase() &&
+                                              !name.contains('created_at') &&
+                                              !name.contains('updated_at') &&
+                                              !name.contains('deleted_at');
+                                        })
+                                        .take(4)
+                                        .map((col) {
+                                          final displayValue = _getDisplayValue(record, col.name);
+                                          if (displayValue.isEmpty) return const SizedBox.shrink();
 
-                                            if (displayValue.isEmpty) {
-                                              return const SizedBox.shrink();
-                                            }
+                                          final isForeignKey = col.name.toLowerCase().endsWith('_id');
 
-                                            final isForeignKey = col.name.toLowerCase().endsWith('_id');
-
-                                            if (isForeignKey && displayValue.contains(':')) {
-                                              return Padding(
-                                                padding: const EdgeInsets.only(bottom: 6),
-                                                child: Row(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.link,
-                                                      size: 16,
-                                                      color: AppColors.primary,
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Text(
-                                                        displayValue,
-                                                        style: AppStyles.bodyMedium.copyWith(
-                                                          color: AppColors.primary,
-                                                          fontWeight: FontWeight.w500,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            }
-
+                                          if (isForeignKey && displayValue.contains(':')) {
                                             return Padding(
                                               padding: const EdgeInsets.only(bottom: 6),
                                               child: Row(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  SizedBox(
-                                                    width: 100,
-                                                    child: Text(
-                                                      '${col.name}:',
-                                                      style: AppStyles.bodySmall.copyWith(
-                                                        fontWeight: FontWeight.w600,
-                                                        color: AppColors.textSecondary,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    child: Text(
-                                                      displayValue,
-                                                      style: AppStyles.bodyMedium,
-                                                    ),
-                                                  ),
+                                                  const Icon(Icons.link, size: 16, color: AppColors.primary),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(child: Text(displayValue, style: AppStyles.bodyMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w500))),
                                                 ],
                                               ),
                                             );
-                                          }),
+                                          }
 
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          TextButton.icon(
-                                            onPressed: () {
-                                              if (pkValue != null) {
-                                                Navigator.pushNamed(
-                                                  context,
-                                                  '/table/${widget.tableName}/edit/$pkValue',
-                                                ).then((_) => _loadData());
-                                              }
-                                            },
-                                            icon: const Icon(AppIcons.edit, size: 18),
-                                            label: const Text('Editar'),
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: AppColors.primary,
+                                          return Padding(
+                                            padding: const EdgeInsets.only(bottom: 6),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                SizedBox(
+                                                  width: 100,
+                                                  child: Text('${col.name}:', style: AppStyles.bodySmall.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                                ),
+                                                Expanded(child: Text(displayValue, style: AppStyles.bodyMedium)),
+                                              ],
                                             ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          TextButton.icon(
-                                            onPressed: () => _confirmDelete(record, pk),
-                                            icon: const Icon(AppIcons.delete, size: 18),
-                                            label: const Text('Eliminar'),
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: AppColors.error,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                          );
+                                        }),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        TextButton.icon(
+                                          onPressed: () {
+                                            if (pkValue != null) {
+                                              Navigator.pushNamed(
+                                                context,
+                                                '/table/${widget.tableName}/edit/$pkValue',
+                                              ).then((_) => _loadData());
+                                            }
+                                          },
+                                          icon: const Icon(AppIcons.edit, size: 18),
+                                          label: const Text('Editar'),
+                                          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        TextButton.icon(
+                                          onPressed: () => _confirmDelete(record, pk),
+                                          icon: const Icon(AppIcons.delete, size: 18),
+                                          label: const Text('Eliminar'),
+                                          style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
+                              ),
                             );
                           },
                         ),
@@ -518,16 +391,11 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
       final dbProvider = context.read<DatabaseSelectorProvider>();
       final crudProvider = context.read<DynamicCrudProvider>();
       final authProvider = context.read<AuthProvider>();
-      final metadataProvider = context.read<MetadataProvider>(); // Importante
-
-      // Seguridad: Verificar metadata
-      if (metadataProvider.metadata == null) return;
 
       LoadingOverlayService.show(context, text: 'Eliminando registro...');
 
       try {
         final success = await crudProvider.deleteRecord(
-          metadata: metadataProvider.metadata!, // <--- NUEVO: Pasamos metadata
           databaseName: dbProvider.currentDatabaseName!,
           tableName: widget.tableName,
           id: pkValue,
@@ -539,24 +407,15 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
         LoadingOverlayService.hide();
 
         if (success) {
-          NotificationService.showSuccess(
-            context,
-            AppStrings.successDelete,
-          );
+          NotificationService.showSuccess(context, AppStrings.successDelete);
           _loadData();
         } else {
-          NotificationService.showError(
-            context,
-            crudProvider.errorMessage ?? AppStrings.errorGeneric,
-          );
+          NotificationService.showError(context, crudProvider.errorMessage ?? AppStrings.errorGeneric);
         }
       } catch (e) {
         LoadingOverlayService.hide();
         if (mounted) {
-          NotificationService.showError(
-            context,
-            'Error al eliminar el registro',
-          );
+          NotificationService.showError(context, 'Error al eliminar el registro');
         }
       }
     }
