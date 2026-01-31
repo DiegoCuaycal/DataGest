@@ -6,28 +6,25 @@ import '../../../../core/network/api_response.dart';
 import '../../../../core/network/endpoint_mapper.dart';
 import '../models/database_metadata_model.dart';
 import '../models/dropdown_item_model.dart';
-import '../models/v2_schema_dto.dart'; // Asegúrate de haber creado este archivo (Paso 1)
-import 'schema_adapter.dart'; // Asegúrate de haber creado este archivo (Paso 2)
+import '../models/v2_schema_dto.dart'; // <--- IMPORTANTE
+import 'schema_adapter.dart'; // <--- IMPORTANTE
 
 class DynamicRemoteDataSource {
   final http.Client client;
 
   DynamicRemoteDataSource({required this.client});
 
-  /// Timeout para todas las peticiones HTTP
   Duration get _timeout => Duration(seconds: EnvConfig.apiTimeout);
-
-  /// URL Base para la V2
+  
+  // URL Base para V2
   String get _v2BaseUrl => '${ApiEndpoints.baseUrl}/api/DynamicCrud/V2';
 
-  // ===========================================================================
-  // 1. METADATA (SE MANTIENE IGUAL - ES EL PUNTO DE ENTRADA)
-  // ===========================================================================
+  // --- 1. METADATA (V1 - Se mantiene igual) ---
   Future<DatabaseMetadataModel> getMetadata({
     required String databaseName,
     required String token,
   }) async {
-    const maxRetries = 3;
+    const int maxRetries = 3;
     int attempt = 0;
 
     while (attempt < maxRetries) {
@@ -69,11 +66,9 @@ class DynamicRemoteDataSource {
     throw Exception('Error desconocido al cargar metadata');
   }
 
-  // ===========================================================================
-  // 2. GET ALL RECORDS (ACTUALIZADO A V2)
-  // ===========================================================================
+  // --- 2. GET ALL (V2 - Actualizado) ---
   Future<List<Map<String, dynamic>>> getTableRecords({
-    required DatabaseMetadataModel metadata, // ¡Nuevo! Necesario para V2
+    required DatabaseMetadataModel metadata,
     required String tableName,
     required String token,
   }) async {
@@ -90,7 +85,6 @@ class DynamicRemoteDataSource {
       print('🚀 V2 GETALL: $tableName');
 
       // 3. Llamada POST al endpoint V2
-      // CRÍTICO: tableName va como query parameter, NO en el body
       final uri = Uri.parse('$_v2BaseUrl/GETALL').replace(
         queryParameters: {'tableName': tableName},
       );
@@ -107,20 +101,7 @@ class DynamicRemoteDataSource {
       print('📡 Status Code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        // === DEBUG: Ver la respuesta exacta del backend ===
-        print('🔍 Response Body Type: ${response.body.runtimeType}');
-        print('🔍 Response Body Length: ${response.body.length}');
-        print('🔍 Response Body Preview (primeros 500 chars): ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
-
         final dynamic jsonData = jsonDecode(response.body);
-        print('🔍 JSON Data Type: ${jsonData.runtimeType}');
-
-        if (jsonData is List) {
-          print('✅ Es una Lista directa con ${jsonData.length} elementos');
-        } else if (jsonData is Map) {
-          print('✅ Es un Map con keys: ${jsonData.keys.toList()}');
-        }
-        // === FIN DEBUG ===
 
         // Adaptar según venga la respuesta (Lista directa o envuelta)
         if (jsonData is List) {
@@ -138,13 +119,6 @@ class DynamicRemoteDataSource {
            return (jsonData['data'] as List).cast<Map<String, dynamic>>();
         }
 
-        // Soporte legacy para ApiResponse si el backend V2 lo usa
-        if (jsonData is Map && jsonData.containsKey('success')) {
-           final apiResponse = ApiResponse.fromJson(jsonData as Map<String, dynamic>, null);
-           return (apiResponse.data as List).cast<Map<String, dynamic>>();
-        }
-
-        print('⚠️ No se encontró ningún array de datos en la respuesta');
         return [];
       } else {
         throw Exception('V2 Error ${response.statusCode}: ${response.body}');
@@ -155,9 +129,8 @@ class DynamicRemoteDataSource {
     }
   }
 
-  // ===========================================================================
-  // 3. PAGINACIÓN (ACTUALIZADO - CLIENT SIDE PAGINATION SOBRE V2)
-  // ===========================================================================
+  // --- 3. PAGINACIÓN (Cliente sobre V2) ---
+  // Reutilizamos tu lógica de paginación local porque el endpoint V2 GETALL devuelve todo
   Future<Map<String, dynamic>> getTableRecordsPaginated({
     required DatabaseMetadataModel metadata,
     required String tableName,
@@ -166,12 +139,8 @@ class DynamicRemoteDataSource {
     required int pageSize,
     String? searchTerm,
   }) async {
-    // NOTA: Como la V2 GETALL devuelve todo (según swagger), 
-    // mantenemos tu lógica de paginación local que funciona muy bien.
     try {
       print('📱 Usando paginación del lado del cliente sobre datos V2');
-      
-      // Llamamos al nuevo método V2
       final allRecords = await getTableRecords(
         metadata: metadata,
         tableName: tableName,
@@ -180,7 +149,6 @@ class DynamicRemoteDataSource {
 
       // --- Tu lógica de ordenamiento y filtrado se mantiene intacta ---
       _sortRecordsDescending(allRecords);
-
       var filteredRecords = allRecords;
       if (searchTerm != null && searchTerm.isNotEmpty) {
         filteredRecords = allRecords.where((record) {
@@ -194,10 +162,7 @@ class DynamicRemoteDataSource {
       final endIndex = (startIndex + pageSize).clamp(0, totalRecords);
 
       final paginatedRecords = startIndex < totalRecords
-          ? filteredRecords.sublist(
-              startIndex.clamp(0, totalRecords),
-              endIndex,
-            )
+          ? filteredRecords.sublist(startIndex.clamp(0, totalRecords), endIndex)
           : <Map<String, dynamic>>[];
 
       return {
@@ -209,51 +174,7 @@ class DynamicRemoteDataSource {
     }
   }
 
-  // ===========================================================================
-  // 4. GET BY ID (ACTUALIZADO A V2)
-  // ===========================================================================
-  Future<Map<String, dynamic>> getTableRecord({
-    required DatabaseMetadataModel metadata,
-    required String tableName,
-    required dynamic id,
-    required String token,
-  }) async {
-    try {
-      final v2Schema = SchemaAdapter.fromMetadata(metadata: metadata, targetTableName: tableName);
-
-      // Según el backend: POST .../GETBYID/{id}?tableName=xxx
-      // El body solo lleva el Schema (DbSchema), no DynamicRequestDto completo
-      final uri = Uri.parse('$_v2BaseUrl/GETBYID/$id').replace(
-        queryParameters: {'tableName': tableName},
-      );
-      print('🔍 V2 GETBYID: $tableName/$id');
-
-      final response = await client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(v2Schema.toJson()), // Solo el schema, no el wrapper
-      ).timeout(_timeout);
-
-      if (response.statusCode == 200) {
-        final dynamic jsonData = jsonDecode(response.body);
-        // Retornamos el objeto directo
-        if (jsonData is Map<String, dynamic>) return jsonData;
-        return {};
-      } else {
-         throw Exception('V2 Error ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      print('❌ Error obteniendo registro V2: $e');
-      throw Exception('Error fetching record: $e');
-    }
-  }
-
-  // ===========================================================================
-  // 5. CREATE (ACTUALIZADO A V2 + TU LOGICA DE FECHAS)
-  // ===========================================================================
+  // --- 4. CREATE (V2 - Actualizado) ---
   Future<Map<String, dynamic>> createTableRecord({
     required DatabaseMetadataModel metadata,
     required String tableName,
@@ -316,9 +237,7 @@ class DynamicRemoteDataSource {
     }
   }
 
-  // ===========================================================================
-  // 6. UPDATE (ACTUALIZADO A V2)
-  // ===========================================================================
+  // --- 5. UPDATE (V2 - Actualizado) ---
   Future<Map<String, dynamic>> updateTableRecord({
     required DatabaseMetadataModel metadata,
     required String tableName,
@@ -364,9 +283,47 @@ class DynamicRemoteDataSource {
     }
   }
 
-  // ===========================================================================
-  // 7. DELETE (MANTENIDO LOGICA ORIGINAL - NO HAY V2 DEFINIDA)
-  // ===========================================================================
+  // --- 6. GET BY ID (V2 - Actualizado) ---
+  Future<Map<String, dynamic>> getTableRecord({
+    required DatabaseMetadataModel metadata,
+    required String tableName,
+    required dynamic id,
+    required String token,
+  }) async {
+    try {
+      final v2Schema = SchemaAdapter.fromMetadata(metadata: metadata, targetTableName: tableName);
+
+      // Según el backend: POST .../GETBYID/{id}?tableName=xxx
+      // El body solo lleva el Schema (DbSchema), no DynamicRequestDto completo
+      final uri = Uri.parse('$_v2BaseUrl/GETBYID/$id').replace(
+        queryParameters: {'tableName': tableName},
+      );
+      print('🔍 V2 GETBYID: $tableName/$id');
+
+      final response = await client.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(v2Schema.toJson()), // Solo el schema, no el wrapper
+      ).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final dynamic jsonData = jsonDecode(response.body);
+        // Retornamos el objeto directo
+        if (jsonData is Map<String, dynamic>) return jsonData;
+        return {};
+      } else {
+         throw Exception('V2 Error ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error obteniendo registro V2: $e');
+      throw Exception('Error fetching record: $e');
+    }
+  }
+
+  // --- 7. DELETE (Legacy / V1) ---
   Future<bool> deleteTableRecord({
     // Recibimos metadata por compatibilidad con el repo, pero no la usamos aquí
     required DatabaseMetadataModel metadata, 
@@ -408,6 +365,75 @@ class DynamicRemoteDataSource {
       throw Exception('Error deleting record: $e');
     }
   }
+    String? sortColumn;
+    final firstRecord = records.first;
+
+    // Prioridad 1: Buscar columnas de fecha de creación
+    for (var key in firstRecord.keys) {
+      final lowerKey = key.toLowerCase();
+      if (lowerKey.contains('created') || lowerKey.contains('fecha_creacion')) {
+        sortColumn = key;
+        break;
+      }
+    }
+
+    // Prioridad 2: Buscar columnas de ID
+    if (sortColumn == null) {
+      for (var key in firstRecord.keys) {
+        final lowerKey = key.toLowerCase();
+        if (lowerKey == 'id' || lowerKey.endsWith('id')) {
+          sortColumn = key;
+          break;
+        }
+      }
+    }
+
+    // Prioridad 3: Primer campo numérico encontrado
+    if (sortColumn == null) {
+      for (var key in firstRecord.keys) {
+        if (firstRecord[key] is num) {
+          sortColumn = key;
+          break;
+        }
+      }
+    }
+
+    // Si encontramos una columna para ordenar, ordenamos descendente
+    if (sortColumn != null) {
+      final column = sortColumn;
+      records.sort((a, b) {
+        final aValue = a[column];
+        final bValue = b[column];
+
+        // Manejo de valores null
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+
+        // Comparación descendente (más nuevo primero)
+        if (aValue is num && bValue is num) {
+          return bValue.compareTo(aValue);
+        }
+
+        if (aValue is String && bValue is String) {
+          // Intentar parsear como fecha
+          try {
+            final dateA = DateTime.parse(aValue);
+            final dateB = DateTime.parse(bValue);
+            return dateB.compareTo(dateA);
+          } catch (_) {
+            // Si no son fechas, comparar como strings
+            return bValue.compareTo(aValue);
+          }
+        }
+
+        return 0;
+      });
+      print('🔽 Registros ordenados descendente por: $column');
+    }
+  }
+
+>>>>>>> origin/dynamic
 
   // ===========================================================================
   // MÉTODOS MOCK (RECUPERADOS PARA EXPORT_REPOSITORY)

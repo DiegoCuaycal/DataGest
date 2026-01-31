@@ -18,15 +18,20 @@ class MetadataProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Retorna todas las tablas disponibles en la base de datos
-  /// NOTA: Ya no se filtran tablas - la app es 100% agnóstica
-  /// Todas las tablas que devuelve el backend son accesibles
+  String? get databaseName => _metadata?.databaseName;
+
+  // --- CORRECCIÓN SENIOR: ELIMINAMOS _allowedTables ---
+  // El Frontend no debe filtrar nada. Si el Backend envía la tabla, se muestra.
+  // Si quieres ocultar tablas (como logs o auditoría), eso se debe filtrar en el Backend (C#)
+  // o usar una convención (ej: ignorar tablas que empiecen con sys_).
+  
   List<TableInfoModel> get tables {
     if (_metadata == null) return [];
+    
+    // Retornamos TODAS las tablas que el Backend nos autorizó ver.
+    // Esto hace que la app sea verdaderamente dinámica.
     return _metadata!.tables;
   }
-
-  String? get databaseName => _metadata?.databaseName;
 
   Future<void> loadMetadata({
     required String databaseName,

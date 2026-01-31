@@ -27,11 +27,11 @@ class DynamicCrudRepository {
     }
   }
 
-  // 2. GET TABLE RECORDS (Lista)
+  // 2. GET TABLE RECORDS (Lista Completa - V2)
   // Cambio: Agregamos 'metadata'
   Future<List<Map<String, dynamic>>> getTableRecords({
-    required DatabaseMetadataModel metadata, // <--- NUEVO
-    required String databaseName, // Se mantiene por si acaso (legacy support)
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required String databaseName, 
     required String tableName,
     required String token,
     bool useMock = false,
@@ -40,9 +40,9 @@ class DynamicCrudRepository {
       if (useMock) {
         return await remoteDataSource.getMockTableRecords(tableName);
       }
+      // Pasamos la metadata al datasource V2
       return await remoteDataSource.getTableRecords(
-        metadata: metadata, // Pasamos la metadata al datasource
-        // databaseName: databaseName, // Ya va dentro de metadata, pero el datasource usa el objeto
+        metadata: metadata, 
         tableName: tableName,
         token: token,
       );
@@ -51,10 +51,10 @@ class DynamicCrudRepository {
     }
   }
 
-  // 3. GET PAGINATED
+  // 3. GET PAGINATED (V2)
   // Cambio: Agregamos 'metadata'
   Future<Map<String, dynamic>> getTableRecordsPaginated({
-    required DatabaseMetadataModel metadata, // <--- NUEVO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required String token,
@@ -85,10 +85,10 @@ class DynamicCrudRepository {
     }
   }
 
-  // 4. GET BY ID
+  // 4. GET BY ID (V2)
   // Cambio: Agregamos 'metadata'
   Future<Map<String, dynamic>> getTableRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -106,10 +106,10 @@ class DynamicCrudRepository {
     }
   }
 
-  // 5. CREATE
+  // 5. CREATE (V2)
   // Cambio: Agregamos 'metadata'
   Future<Map<String, dynamic>> createTableRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required Map<String, dynamic> data,
@@ -127,10 +127,10 @@ class DynamicCrudRepository {
     }
   }
 
-  // 6. UPDATE
+  // 6. UPDATE (V2)
   // Cambio: Agregamos 'metadata'
   Future<Map<String, dynamic>> updateTableRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -150,10 +150,11 @@ class DynamicCrudRepository {
     }
   }
 
-  // 7. DELETE
-  // Cambio: Agregamos 'metadata' (para consistencia, aunque internamente use legacy)
+  // 7. DELETE (Legacy/V1)
+  // Nota: Mantenemos la firma con 'metadata' por consistencia en el Provider,
+  // aunque el datasource use la lógica legacy (V1) que pide databaseName.
   Future<bool> deleteTableRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO
+    required DatabaseMetadataModel metadata, // <--- NUEVO (Por consistencia)
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -161,8 +162,7 @@ class DynamicCrudRepository {
   }) async {
     try {
       return await remoteDataSource.deleteTableRecord(
-        metadata: metadata,
-        databaseName: databaseName,
+        databaseName: databaseName, // Delete sigue usando V1
         tableName: tableName,
         id: id,
         token: token,
@@ -172,8 +172,8 @@ class DynamicCrudRepository {
     }
   }
 
-  // 8. DROPDOWN
-  // Este se queda IGUAL porque el datasource no se migró a V2 para dropdowns
+  // 8. DROPDOWN (Legacy/V1)
+  // Este se queda IGUAL porque los dropdowns suelen usar endpoints V1
   Future<List<DropdownItemModel>> getDropdownData({
     required String databaseName,
     required String tableName,

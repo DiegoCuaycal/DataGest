@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'package:herramienta_case/modules/dynamic_crud/data/datasources/dynamic_remote_datasource.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/models/table_info_model.dart';
-// IMPORTANTE: Necesitamos importar el modelo de metadata
-import 'package:herramienta_case/modules/dynamic_crud/data/models/database_metadata_model.dart'; 
+import 'package:herramienta_case/modules/dynamic_crud/data/models/database_metadata_model.dart'; // <--- IMPORTAR
 import 'package:herramienta_case/modules/export/domain/models/export_config.dart';
 import 'package:herramienta_case/modules/export/domain/models/export_result.dart';
 import 'package:herramienta_case/modules/export/domain/services/export_service.dart';
@@ -19,8 +18,8 @@ class ExportRepository {
 
   /// Exporta datos de una tabla específica
   Future<ExportResult> exportTable({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO V2
-    required String databaseName,
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO (V2)
+    required String databaseName, // Se mantiene por si ExportService lo usa, pero no se pasa al DataSource V2
     required String tableName,
     required ExportConfig config,
     required String token,
@@ -30,7 +29,6 @@ class ExportRepository {
       List<Map<String, dynamic>> data;
 
       if (useMockData) {
-        // Usar datos de prueba (Ahora sí funcionará porque agregamos el método al datasource)
         print('⚠️ Usando datos de prueba para tabla: $tableName');
         data = await remoteDataSource.getMockTableRecords(tableName);
 
@@ -41,12 +39,12 @@ class ExportRepository {
           ];
         }
       } else {
-        // Obtener los datos reales de la tabla usando la Lógica V2
-        // Nótese que ahora pasamos 'metadata' y quitamos 'databaseName' del llamado
+        // Obtener los datos reales de la tabla (USANDO V2)
         data = await remoteDataSource.getTableRecords(
-          metadata: metadata, // <--- Pasamos la metadata aquí
+          metadata: metadata, // <--- PASAR METADATA (V2)
           tableName: tableName,
           token: token,
+          // databaseName: databaseName // <--- ELIMINADO (V2 no lo usa en DataSource)
         );
       }
 
@@ -66,7 +64,7 @@ class ExportRepository {
 
   /// Exporta datos de múltiples tablas
   Future<List<ExportResult>> exportMultipleTables({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO V2
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO (V2)
     required String databaseName,
     required List<TableInfoModel> tables,
     required ExportConfig baseConfig,
@@ -88,9 +86,9 @@ class ExportRepository {
 
         final config = baseConfig.copyWith(tableName: table.table);
 
-        // Exportar la tabla pasando la metadata
+        // Exportar la tabla
         final result = await exportTable(
-          metadata: metadata, // <--- Pasamos la metadata
+          metadata: metadata, // <--- PASAR METADATA
           databaseName: databaseName,
           tableName: table.table,
           config: config,
@@ -111,23 +109,16 @@ class ExportRepository {
     print('   ✅ Exitosas: ${results.length}');
     print('   ❌ Fallidas: ${errors.length}');
 
-    if (errors.isNotEmpty) {
-      print('\n⚠️ Errores encontrados:');
-      for (final error in errors) {
-        print('   - $error');
-      }
-    }
-
     if (results.isEmpty) {
       throw Exception(
-        'No se pudo exportar ninguna tabla.\nErrors:\n${errors.join('\n')}'
+        'No se pudo exportar ninguna tabla.\n\n'
+        'Errores:\n${errors.join('\n')}'
       );
     }
 
     return results;
   }
 
-  /// Extrae el mensaje de error más relevante
   String _extractErrorMessage(String fullError) {
     if (fullError.contains('404')) {
       return 'No se encontró el endpoint (404)';
@@ -141,14 +132,14 @@ class ExportRepository {
 
   /// Exporta todas las tablas de la base de datos
   Future<List<ExportResult>> exportAllTables({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUISITO V2
+    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO (V2)
     required String databaseName,
     required List<TableInfoModel> allTables,
     required ExportConfig config,
     required String token,
   }) async {
     return await exportMultipleTables(
-      metadata: metadata, // <--- Pasamos la metadata
+      metadata: metadata, // <--- PASAR METADATA
       databaseName: databaseName,
       tables: allTables,
       baseConfig: config,
@@ -156,22 +147,19 @@ class ExportRepository {
     );
   }
 
-  /// Obtiene el directorio de exportaciones
+  // Métodos de gestión de archivos (sin cambios)
   Future<String> getExportsDirectory() async {
     return await exportService.getExportsDirectory();
   }
 
-  /// Lista los archivos exportados
   Future<List<FileSystemEntity>> listExportedFiles() async {
     return await exportService.listExportedFiles();
   }
 
-  /// Elimina un archivo exportado
   Future<void> deleteExportedFile(String filePath) async {
     return await exportService.deleteExportedFile(filePath);
   }
 
-  /// Limpia todas las exportaciones
   Future<void> clearExports() async {
     return await exportService.clearExports();
   }
