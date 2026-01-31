@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/database_info_model.dart';
 import '../../data/repositories/database_repository.dart';
+import 'package:file_picker/file_picker.dart';
 
 class DatabaseSelectorProvider extends ChangeNotifier {
   final DatabaseRepository repository;
@@ -61,5 +62,24 @@ class DatabaseSelectorProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  Future<String?> pickDatabaseFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['sql', 'db', 'csv'],
+      );
+
+      if (result != null) {
+        return result.files.single.path;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      _errorMessage = 'Error picking file: $e';
+      notifyListeners();
+      return null;
+    }
   }
 }

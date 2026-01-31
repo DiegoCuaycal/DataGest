@@ -196,15 +196,42 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, '/create-database');
-        },
-        backgroundColor: AppColors.success,
-        foregroundColor: AppColors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Crear BD'),
-        tooltip: 'Crear nueva base de datos',
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'create_db_btn',
+            onPressed: () {
+              Navigator.pushNamed(context, '/create-database');
+            },
+            backgroundColor: AppColors.success,
+            foregroundColor: AppColors.white,
+            icon: const Icon(Icons.add),
+            label: const Text('Crear BD'),
+            tooltip: 'Crear nueva base de datos',
+          ),
+          const SizedBox(height: AppStyles.paddingMedium),
+          FloatingActionButton.extended(
+            heroTag: 'import_db_btn',
+            onPressed: () async {
+              final filePath = await context.read<DatabaseSelectorProvider>().pickDatabaseFile();
+              if (filePath != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Archivo seleccionado: $filePath'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            },
+            backgroundColor: AppColors.secondary,
+            foregroundColor: AppColors.white,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Importar'),
+            tooltip: 'Importar base de datos',
+          ),
+        ],
       ),
     );
   }
