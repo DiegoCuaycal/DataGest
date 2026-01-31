@@ -365,6 +365,10 @@ class DynamicRemoteDataSource {
       throw Exception('Error deleting record: $e');
     }
   }
+
+  // --- HELPERS (Sorting y Error Messages) ---
+  void _sortRecordsDescending(List<Map<String, dynamic>> records) {
+    if (records.isEmpty) return;
     String? sortColumn;
     final firstRecord = records.first;
 
@@ -433,64 +437,71 @@ class DynamicRemoteDataSource {
     }
   }
 
->>>>>>> origin/dynamic
-
   // ===========================================================================
-  // MÉTODOS MOCK (RECUPERADOS PARA EXPORT_REPOSITORY)
+  // MÉTODOS MOCK (RESTAURADOS)
   // ===========================================================================
 
   Future<DatabaseMetadataModel> getMockMetadata() async {
     await Future.delayed(const Duration(seconds: 1));
-    // Mock básico para pruebas
-    return DatabaseMetadataModel(
-      databaseName: "MockDB",
-      tables: [], 
-      columns: [],
-      pkInfo: [],
-      fkInfo: [],
-      indexes: [],
-      views: []
-    );
+    const mockJson = {
+      "database_name": "MockDB",
+      "tables": [
+        {"schema": "dbo", "table": "Usuarios", "row_count": 25, "table_type": "USER_TABLE"},
+        {"schema": "dbo", "table": "Tareas", "row_count": 50, "table_type": "USER_TABLE"},
+      ],
+      "columns": [
+        {"schema": "dbo", "table": "Usuarios", "name": "id", "type": "int", "is_identity": true},
+        {"schema": "dbo", "table": "Usuarios", "name": "nombre", "type": "varchar", "is_identity": false},
+        {"schema": "dbo", "table": "Tareas", "name": "id", "type": "int", "is_identity": true},
+        {"schema": "dbo", "table": "Tareas", "name": "descripcion", "type": "varchar", "is_identity": false},
+      ],
+      "pk_info": [
+        {"schema": "dbo", "table": "Usuarios", "column": "id"},
+        {"schema": "dbo", "table": "Tareas", "column": "id"},
+      ],
+    };
+    return DatabaseMetadataModel.fromJson(mockJson);
   }
 
   Future<List<Map<String, dynamic>>> getMockTableRecords(String tableName) async {
     await Future.delayed(const Duration(milliseconds: 500));
-    // Retorna datos de prueba genéricos
     return List.generate(10, (index) => {
       'id': index + 1,
-      'titulo': 'Dato de Prueba ${index + 1} para $tableName',
-      'fecha': DateTime.now().toIso8601String(),
+      'nombre': 'Dato Mock ${index + 1} ($tableName)',
+      'created_at': DateTime.now().subtract(Duration(days: index)).toIso8601String(),
     });
   }
-  
-  // Este también se usaba en tu código anterior
+
   Future<Map<String, dynamic>> getMockTableRecordsPaginated({
     required String tableName,
     required int page,
     required int pageSize,
     String? searchTerm,
   }) async {
-    final records = await getMockTableRecords(tableName);
+    final all = await getMockTableRecords(tableName);
     return {
-      'records': records,
-      'totalRecords': records.length,
+      'records': all,
+      'totalRecords': all.length,
     };
   }
-  
+
   Future<List<DropdownItemModel>> getMockDropdownData(String tableName) async {
-      return [];
+    return [
+      DropdownItemModel(id: 1, displayValue: 'Opción Mock 1'),
+      DropdownItemModel(id: 2, displayValue: 'Opción Mock 2'),
+    ];
   }
 
   // ===========================================================================
-  // 8. DROPDOWN & UTILS (SE MANTIENEN IGUAL)
+  // 8. DROPDOWN (Actualizado para seguir usando V1)
   // ===========================================================================
+
   Future<List<DropdownItemModel>> getDropdownData({
     required String databaseName,
     required String tableName,
     required String token,
     List<String>? displayColumns,
   }) async {
-    // Mantenemos lógica original para dropdowns
     try {
       final endpoint = EndpointMapper.getDropdownEndpoint(
         databaseName: databaseName,
@@ -518,52 +529,34 @@ class DynamicRemoteDataSource {
         }
         return [];
       } else {
-        return []; // Retorna vacío si falla (comportamiento original seguro)
+        return []; 
       }
     } catch (e) {
       print('❌ Error dropdown: $e');
       return [];
     }
   }
-
-  // --- HELPERS (Sorting y Error Messages) SE MANTIENEN IGUAL ---
-  void _sortRecordsDescending(List<Map<String, dynamic>> records) {
-    if (records.isEmpty) return;
-    String? sortColumn;
-    final firstRecord = records.first;
-
-    for (var key in firstRecord.keys) {
-      final lowerKey = key.toLowerCase();
-      if (lowerKey.contains('created') || lowerKey.contains('fecha_creacion')) {
-        sortColumn = key;
-        break;
-      }
-    }
-    if (sortColumn == null) {
-      for (var key in firstRecord.keys) {
-        if (lowerKeyMatchesId(key)) { sortColumn = key; break; }
-      }
-    }
-    
-    if (sortColumn != null) {
-      final column = sortColumn;
-      records.sort((a, b) {
-        final aValue = a[column];
-        final bValue = b[column];
-        if (aValue == null && bValue == null) return 0;
-        if (aValue == null) return 1;
-        if (bValue == null) return -1;
-        if (aValue is num && bValue is num) return bValue.compareTo(aValue);
-        return bValue.toString().compareTo(aValue.toString());
-      });
-    }
-  }
   
   bool lowerKeyMatchesId(String key) => key.toLowerCase() == 'id' || key.toLowerCase().endsWith('id');
 
   String _getDeleteErrorMessage(String tableName) {
-    // ... (Tu lista de mensajes de error original se mantiene aquí)
-    return 'No se puede eliminar el registro. Verifique dependencias.';
-  }
+    final lowerTable = tableName.toLowerCase();
+    final Map<String, String> tableMessages = {
+      'categorias': 'Tiene productos asociados.',
+      'medicos': 'Tiene citas registradas.',
+      'pacientes': 'Tiene citas o historiales médicos.',
+      'proveedores': 'Tiene productos asociados.',
+      'cursos': 'Tiene estudiantes inscritos.',
+      'profesores': 'Tiene cursos asignados.',
+      'citas': 'Tiene historiales clínicos asociados.',
+    };
 
+    for (var entry in tableMessages.entries) {
+      if (lowerTable.contains(entry.key)) {
+        return 'No se puede eliminar: ${entry.value}';
+      }
+    }
+
+    return 'No se puede eliminar el registro por dependencias en otras tablas.';
+  }
 }
