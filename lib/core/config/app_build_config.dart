@@ -1,19 +1,22 @@
-/// Configuración de compilación de la aplicación
-/// Este archivo contiene placeholders que son reemplazados por el generador de APK
 class AppBuildConfig {
-  /// Nombre de la base de datos pre-configurada
-  /// Este placeholder será reemplazado por el script de C# antes de compilar
-  /// Si el valor no es reemplazado, la app funcionará en "Modo Genérico"
+  // TRUCO DE SEGURIDAD:
+  // Partimos el string en pedazos ("{{" + ... + "}}") para que el script de C#
+  // NO lo reemplace aquí (en la variable _placeholderPattern), solo abajo.
+  static const String _placeholderPattern = "{{" + "DB_NAME_PLACEHOLDER" + "}}";
+
+  /// 🚨 IMPORTANTE: Esta línea debe tener EXACTAMENTE este texto.
+  /// C# buscará "{{DB_NAME_PLACEHOLDER}}" y pondrá aquí el nombre (ej: "Medicos").
+  /// Si tu compañera puso "Productos" o "", cámbialo a esto:
   static const String defaultDatabaseName = "{{DB_NAME_PLACEHOLDER}}";
 
-  /// Indica si la app fue pre-configurada para una base de datos específica
-  /// Retorna true si el placeholder fue reemplazado con un nombre de BD válido
-  /// Retorna false si la app está en "Modo Genérico" (sin pre-configuración)
+  /// LÓGICA DEL INTERRUPTOR:
+  /// Compara si el valor actual es diferente al patrón original.
+  /// Si C# inyectó "Medicos", entonces "Medicos" != "{{...}}" -> TRUE (Es Dinámica)
+  /// Si nadie inyectó nada, "{{...}}" == "{{...}}" -> FALSE (Es Genérica)
   static bool get isPreConfigured =>
-      defaultDatabaseName != "{{DB_NAME_PLACEHOLDER}}" &&
+      defaultDatabaseName != _placeholderPattern &&
       defaultDatabaseName.isNotEmpty;
 
-  /// Retorna el nombre de la base de datos configurada o null si no hay ninguna
   static String? get configuredDatabase =>
       isPreConfigured ? defaultDatabaseName : null;
 
