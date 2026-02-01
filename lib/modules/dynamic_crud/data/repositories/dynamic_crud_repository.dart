@@ -162,7 +162,6 @@ class DynamicCrudRepository {
   }) async {
     try {
       return await remoteDataSource.deleteTableRecord(
-        metadata: metadata,
         databaseName: databaseName, // Delete sigue usando V1
         tableName: tableName,
         id: id,
