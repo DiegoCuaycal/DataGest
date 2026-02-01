@@ -24,10 +24,6 @@ class DynamicRemoteDataSource {
     required String databaseName,
     required String token,
   }) async {
-<<<<<<< HEAD
-    const int maxRetries = 3;
-    int attempt = 0;
-=======
     // ... (Mantén tu código original de getMetadata aquí, es correcto) ...
     // Para abreviar aquí, asumo que copias tu lógica de reintentos existente.
     // ...
@@ -38,7 +34,6 @@ class DynamicRemoteDataSource {
       Uri.parse(url),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
     ).timeout(_timeout);
->>>>>>> dynamic
 
     if (response.statusCode == 200) {
       return DatabaseMetadataModel.fromJson(jsonDecode(response.body));
@@ -48,11 +43,7 @@ class DynamicRemoteDataSource {
 
   // --- 2. GET ALL (V2 - Actualizado) ---
   Future<List<Map<String, dynamic>>> getTableRecords({
-<<<<<<< HEAD
-    required DatabaseMetadataModel metadata,
-=======
     required DatabaseMetadataModel metadata, // Necesitamos metadata para el schema
->>>>>>> dynamic
     required String tableName,
     required String token,
   }) async {
@@ -61,13 +52,7 @@ class DynamicRemoteDataSource {
       final v2Schema = SchemaAdapter.fromMetadata(metadata: metadata, targetTableName: tableName);
       final requestBody = V2DynamicRequest(schema: v2Schema);
 
-<<<<<<< HEAD
-      print('🚀 V2 GETALL: $tableName');
-
-      // 3. Llamada POST al endpoint V2
-=======
       // QUERY PARAMETER: tableName
->>>>>>> dynamic
       final uri = Uri.parse('$_v2BaseUrl/GETALL').replace(
         queryParameters: {'tableName': tableName},
       );
@@ -84,25 +69,6 @@ class DynamicRemoteDataSource {
 
       if (response.statusCode == 200) {
         final dynamic jsonData = jsonDecode(response.body);
-<<<<<<< HEAD
-
-        // Adaptar según venga la respuesta (Lista directa o envuelta)
-        if (jsonData is List) {
-          return jsonData.cast<Map<String, dynamic>>();
-        }
-
-        // V2 Backend devuelve datos en 'rowsAffected'
-        if (jsonData is Map && jsonData.containsKey('rowsAffected')) {
-          print('✅ Datos encontrados en rowsAffected');
-          return (jsonData['rowsAffected'] as List).cast<Map<String, dynamic>>();
-        }
-
-        // Otras variantes posibles
-        if (jsonData is Map && jsonData.containsKey('data')) {
-           return (jsonData['data'] as List).cast<Map<String, dynamic>>();
-        }
-
-=======
         
         // Manejar estructura { message: "...", rowsAffected: [...] }
         if (jsonData is Map && jsonData.containsKey('rowsAffected')) {
@@ -111,7 +77,6 @@ class DynamicRemoteDataSource {
         if (jsonData is List) {
           return jsonData.cast<Map<String, dynamic>>();
         }
->>>>>>> dynamic
         return [];
       } else {
         throw Exception('V2 Error ${response.statusCode}: ${response.body}');
@@ -133,11 +98,7 @@ class DynamicRemoteDataSource {
     String? searchTerm,
   }) async {
     try {
-<<<<<<< HEAD
-      print('📱 Usando paginación del lado del cliente sobre datos V2');
-=======
       print('📱 Paginando localmente sobre datos V2');
->>>>>>> dynamic
       final allRecords = await getTableRecords(
         metadata: metadata,
         tableName: tableName,
@@ -146,11 +107,8 @@ class DynamicRemoteDataSource {
 
       // Tu lógica de ordenamiento (copiada de tu código)
       _sortRecordsDescending(allRecords);
-<<<<<<< HEAD
-=======
 
       // Tu lógica de filtrado
->>>>>>> dynamic
       var filteredRecords = allRecords;
       if (searchTerm != null && searchTerm.isNotEmpty) {
         filteredRecords = allRecords.where((record) {
@@ -266,35 +224,6 @@ class DynamicRemoteDataSource {
   }) async {
     try {
       final v2Schema = SchemaAdapter.fromMetadata(metadata: metadata, targetTableName: tableName);
-<<<<<<< HEAD
-
-      // Según el backend: POST .../GETBYID/{id}?tableName=xxx
-      // El body solo lleva el Schema (DbSchema), no DynamicRequestDto completo
-      final uri = Uri.parse('$_v2BaseUrl/GETBYID/$id').replace(
-        queryParameters: {'tableName': tableName},
-      );
-      print('🔍 V2 GETBYID: $tableName/$id');
-
-      final response = await client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(v2Schema.toJson()), // Solo el schema, no el wrapper
-      ).timeout(_timeout);
-
-      if (response.statusCode == 200) {
-        final dynamic jsonData = jsonDecode(response.body);
-        // Retornamos el objeto directo
-        if (jsonData is Map<String, dynamic>) return jsonData;
-        return {};
-      } else {
-         throw Exception('V2 Error ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      print('❌ Error obteniendo registro V2: $e');
-=======
       
       // POST V2/GETBYID/{id}
       final uri = Uri.parse('$_v2BaseUrl/GETBYID/$id').replace(
@@ -314,16 +243,11 @@ class DynamicRemoteDataSource {
         throw Exception('V2 GetById Error: ${response.statusCode}');
       }
     } catch (e) {
->>>>>>> dynamic
       throw Exception('Error fetching record: $e');
     }
   }
 
-<<<<<<< HEAD
-  // --- 7. DELETE (Legacy / V1) ---
-=======
   // --- MÉTODO FALTANTE: DELETE (Legacy / V1) ---
->>>>>>> dynamic
   Future<bool> deleteTableRecord({
     required String databaseName,
     required String tableName,
@@ -366,138 +290,6 @@ class DynamicRemoteDataSource {
     }
   }
 
-<<<<<<< HEAD
-  // --- HELPERS (Sorting y Error Messages) ---
-  void _sortRecordsDescending(List<Map<String, dynamic>> records) {
-    if (records.isEmpty) return;
-    String? sortColumn;
-    final firstRecord = records.first;
-
-    // Prioridad 1: Buscar columnas de fecha de creación
-    for (var key in firstRecord.keys) {
-      final lowerKey = key.toLowerCase();
-      if (lowerKey.contains('created') || lowerKey.contains('fecha_creacion')) {
-        sortColumn = key;
-        break;
-      }
-    }
-
-    // Prioridad 2: Buscar columnas de ID
-    if (sortColumn == null) {
-      for (var key in firstRecord.keys) {
-        final lowerKey = key.toLowerCase();
-        if (lowerKey == 'id' || lowerKey.endsWith('id')) {
-          sortColumn = key;
-          break;
-        }
-      }
-    }
-
-    // Prioridad 3: Primer campo numérico encontrado
-    if (sortColumn == null) {
-      for (var key in firstRecord.keys) {
-        if (firstRecord[key] is num) {
-          sortColumn = key;
-          break;
-        }
-      }
-    }
-
-    // Si encontramos una columna para ordenar, ordenamos descendente
-    if (sortColumn != null) {
-      final column = sortColumn;
-      records.sort((a, b) {
-        final aValue = a[column];
-        final bValue = b[column];
-
-        // Manejo de valores null
-        if (aValue == null && bValue == null) return 0;
-        if (aValue == null) return 1;
-        if (bValue == null) return -1;
-
-        // Comparación descendente (más nuevo primero)
-        if (aValue is num && bValue is num) {
-          return bValue.compareTo(aValue);
-        }
-
-        if (aValue is String && bValue is String) {
-          // Intentar parsear como fecha
-          try {
-            final dateA = DateTime.parse(aValue);
-            final dateB = DateTime.parse(bValue);
-            return dateB.compareTo(dateA);
-          } catch (_) {
-            // Si no son fechas, comparar como strings
-            return bValue.compareTo(aValue);
-          }
-        }
-
-        return 0;
-      });
-      print('🔽 Registros ordenados descendente por: $column');
-    }
-  }
-
-  // ===========================================================================
-  // MÉTODOS MOCK (RESTAURADOS)
-  // ===========================================================================
-
-  Future<DatabaseMetadataModel> getMockMetadata() async {
-    await Future.delayed(const Duration(seconds: 1));
-    const mockJson = {
-      "database_name": "MockDB",
-      "tables": [
-        {"schema": "dbo", "table": "Usuarios", "row_count": 25, "table_type": "USER_TABLE"},
-        {"schema": "dbo", "table": "Tareas", "row_count": 50, "table_type": "USER_TABLE"},
-      ],
-      "columns": [
-        {"schema": "dbo", "table": "Usuarios", "name": "id", "type": "int", "is_identity": true},
-        {"schema": "dbo", "table": "Usuarios", "name": "nombre", "type": "varchar", "is_identity": false},
-        {"schema": "dbo", "table": "Tareas", "name": "id", "type": "int", "is_identity": true},
-        {"schema": "dbo", "table": "Tareas", "name": "descripcion", "type": "varchar", "is_identity": false},
-      ],
-      "pk_info": [
-        {"schema": "dbo", "table": "Usuarios", "column": "id"},
-        {"schema": "dbo", "table": "Tareas", "column": "id"},
-      ],
-    };
-    return DatabaseMetadataModel.fromJson(mockJson);
-  }
-
-  Future<List<Map<String, dynamic>>> getMockTableRecords(String tableName) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return List.generate(10, (index) => {
-      'id': index + 1,
-      'nombre': 'Dato Mock ${index + 1} ($tableName)',
-      'created_at': DateTime.now().subtract(Duration(days: index)).toIso8601String(),
-    });
-  }
-
-  Future<Map<String, dynamic>> getMockTableRecordsPaginated({
-    required String tableName,
-    required int page,
-    required int pageSize,
-    String? searchTerm,
-  }) async {
-    final all = await getMockTableRecords(tableName);
-    return {
-      'records': all,
-      'totalRecords': all.length,
-    };
-  }
-
-  Future<List<DropdownItemModel>> getMockDropdownData(String tableName) async {
-    return [
-      DropdownItemModel(id: 1, displayValue: 'Opción Mock 1'),
-      DropdownItemModel(id: 2, displayValue: 'Opción Mock 2'),
-    ];
-  }
-
-  // ===========================================================================
-  // 8. DROPDOWN (Actualizado para seguir usando V1)
-  // ===========================================================================
-
-=======
   /// Ordena los registros en orden descendente (más nuevos primero)
   /// Intenta ordenar por: id, ID, created_at, createdAt, updated_at, o el primer campo numérico encontrado
   void _sortRecordsDescending(List<Map<String, dynamic>> records) {
@@ -573,7 +365,6 @@ class DynamicRemoteDataSource {
   }
 
 
->>>>>>> dynamic
   Future<List<DropdownItemModel>> getDropdownData({
     required String databaseName,
     required String tableName,
@@ -658,21 +449,13 @@ class DynamicRemoteDataSource {
         // Esto permite que el formulario se muestre, y el campo quedará vacío/opcional
         return [];
       } else {
-<<<<<<< HEAD
-        return []; 
-=======
         throw Exception('Error ${response.statusCode} al cargar dropdown desde $endpoint: ${response.body}');
->>>>>>> dynamic
       }
     } catch (e) {
       print('❌ Error cargando dropdown: $e');
       throw Exception('Error fetching dropdown data: $e');
     }
   }
-<<<<<<< HEAD
-  
-  bool lowerKeyMatchesId(String key) => key.toLowerCase() == 'id' || key.toLowerCase().endsWith('id');
-=======
 
   // Mock metadata for testing
   Future<DatabaseMetadataModel> getMockMetadata() async {
@@ -758,7 +541,6 @@ class DynamicRemoteDataSource {
         'Estado': index % 2 == 0 ? 'Pendiente' : 'Completado',
       });
     }
->>>>>>> dynamic
 
     return [];
   }
@@ -803,27 +585,6 @@ class DynamicRemoteDataSource {
   /// Genera un mensaje de error específico según la tabla que se intenta eliminar
   String _getDeleteErrorMessage(String tableName) {
     final lowerTable = tableName.toLowerCase();
-<<<<<<< HEAD
-    final Map<String, String> tableMessages = {
-      'categorias': 'Tiene productos asociados.',
-      'medicos': 'Tiene citas registradas.',
-      'pacientes': 'Tiene citas o historiales médicos.',
-      'proveedores': 'Tiene productos asociados.',
-      'cursos': 'Tiene estudiantes inscritos.',
-      'profesores': 'Tiene cursos asignados.',
-      'citas': 'Tiene historiales clínicos asociados.',
-    };
-
-    for (var entry in tableMessages.entries) {
-      if (lowerTable.contains(entry.key)) {
-        return 'No se puede eliminar: ${entry.value}';
-      }
-    }
-
-    return 'No se puede eliminar el registro por dependencias en otras tablas.';
-  }
-}
-=======
 
     // Mensajes específicos por tabla
     final Map<String, String> tableMessages = {
@@ -881,4 +642,3 @@ class DynamicRemoteDataSource {
         '📞 Si el problema persiste, contacte al administrador del sistema.';
   }
 }
->>>>>>> dynamic
