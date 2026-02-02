@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:herramienta_case/modules/auth/data/repositories/auth_repository.dart';
 import 'package:herramienta_case/modules/auth/domain/entities/user_entity.dart';
 import 'package:herramienta_case/shared/providers/app_provider.dart';
+import 'package:herramienta_case/core/config/env_config.dart'; 
 
 /// Provider de autenticación
 class AuthProvider extends AppProvider {
@@ -81,6 +85,59 @@ class AuthProvider extends AppProvider {
       clearState();
     }
   }
+
+  // ===========================================================================
+  // NUEVA FUNCIÓN: IMPORTAR MÓDULO (SQL -> API)
+  // ===========================================================================
+  Future<bool> createModule({
+    required String dbName, 
+    required String jsonTables
+  }) async {
+    try {
+      setLoading(true); // Usamos tu método heredado
+      clearError();
+
+      // URL desde EnvConfig (configurado en .env)
+      final uri = Uri.parse('${EnvConfig.apiUrl}/api/Auth/crear-modulo');
+
+      debugPrint("📤 Enviando a: $uri");
+      
+      // 2. Preparamos el cuerpo exacto como pide el Swagger
+      final body = jsonEncode({
+        "nombreDb": dbName,
+        "jsonTablas": jsonTables, // El JSON convertido a String
+      });
+
+      // 3. Hacemos el envío
+      final response = await http.post(
+        uri,
+        headers: {
+          "Content-Type": "application/json",
+          // Importante: Enviamos el token del usuario actual para tener permiso
+          "Authorization": "Bearer ${currentUser?.token ?? ''}", 
+        },
+        body: body,
+      );
+
+      setLoading(false);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint("✅ Módulo creado exitosamente en el Backend");
+        return true;
+      } else {
+        debugPrint("❌ Error del servidor (${response.statusCode}): ${response.body}");
+        setError("Error al crear la base de datos: ${response.statusCode}");
+        return false;
+      }
+
+    } catch (e) {
+      setLoading(false);
+      debugPrint("❌ Error de conexión: $e");
+      setError("Error de conexión al importar: $e");
+      return false;
+    }
+  }
+  // ===========================================================================
 
   /// Obtiene un mensaje de error amigable
   String _getErrorMessage(dynamic error) {
