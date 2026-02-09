@@ -215,14 +215,19 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
           FloatingActionButton.extended(
             heroTag: 'import_db_btn',
             onPressed: () async {
-              final filePath = await context.read<DatabaseSelectorProvider>().pickDatabaseFile();
-              if (filePath != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Archivo seleccionado: $filePath'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
+              final provider = context.read<DatabaseSelectorProvider>();
+              final pickedFile = await provider.pickDatabaseFile();
+              if (pickedFile != null && context.mounted) {
+                final confirmed = await _showImportPreview(context, pickedFile);
+                if (confirmed == true && context.mounted) {
+                  final importedDatabase = provider.addImportedDatabase(pickedFile);
+                  if (!context.mounted) return;
+                  NotificationService.showSuccess(
+                    context,
+                    'Base de datos "${importedDatabase.name}" importada',
+                  );
+                  Navigator.pushNamed(context, '/login');
+                }
               }
             },
             backgroundColor: AppColors.secondary,
@@ -233,6 +238,145 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<bool?> _showImportPreview(BuildContext context, PickedDatabaseFile file) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppStyles.radiusLarge),
+        ),
+      ),
+      builder: (_) => _ImportPreviewSheet(file: file),
+    );
+  }
+}
+
+class _ImportPreviewSheet extends StatelessWidget {
+  final PickedDatabaseFile file;
+
+  const _ImportPreviewSheet({required this.file});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppStyles.paddingLarge,
+        right: AppStyles.paddingLarge,
+        top: AppStyles.paddingLarge,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppStyles.paddingLarge,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppStyles.paddingLarge),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppStyles.paddingMedium),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                ),
+                child: const Icon(Icons.upload_file, color: AppColors.secondary, size: 32),
+              ),
+              const SizedBox(width: AppStyles.paddingMedium),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Revisar archivo', style: AppStyles.heading4),
+                    const SizedBox(height: 4),
+                    Text('Confirma que corresponde al motor correcto antes de importar',
+                        style: AppStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppStyles.paddingLarge),
+          _InfoRow(label: 'Nombre', value: file.name),
+          const SizedBox(height: AppStyles.paddingSmall),
+          _InfoRow(label: 'Ruta', value: file.path),
+          const SizedBox(height: AppStyles.paddingSmall),
+          _InfoRow(label: 'Tipo detectado', value: file.detectedType),
+          const SizedBox(height: AppStyles.paddingSmall),
+          _InfoRow(
+            label: 'Extensión',
+            value: file.name.contains('.') ? file.name.split('.').last.toUpperCase() : 'N/A',
+          ),
+          const SizedBox(height: AppStyles.paddingLarge),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    side: BorderSide(color: AppColors.textSecondary.withValues(alpha: 0.3)),
+                  ),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              const SizedBox(width: AppStyles.paddingMedium),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.secondary,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: AppStyles.paddingMedium),
+                  ),
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Confirmar'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        SelectableText(
+          value,
+          style: AppStyles.bodyMedium,
+        ),
+      ],
     );
   }
 }

@@ -58,6 +58,8 @@ class DatabaseCard extends StatelessWidget {
                         color: AppColors.textSecondary,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    _DatabaseTypeChip(type: database.type),
                   ],
                 ),
               ),
@@ -76,6 +78,68 @@ class DatabaseCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DatabaseTypeChip extends StatelessWidget {
+  final String type;
+
+  const _DatabaseTypeChip({required this.type});
+
+  Color _backgroundColor() {
+    final normalized = type.toLowerCase();
+    if (normalized.contains('postgres')) return AppColors.secondary.withValues(alpha: 0.15);
+    if (normalized.contains('maria')) return AppColors.success.withValues(alpha: 0.15);
+    if (normalized.contains('mysql')) return AppColors.warning.withValues(alpha: 0.15);
+    if (normalized.contains('sql server') || normalized.contains('sqlserver') || normalized.contains('mssql')) {
+      return AppColors.primary.withValues(alpha: 0.15);
+    }
+    if (normalized.contains('sqlite')) return AppColors.info.withValues(alpha: 0.15);
+    return AppColors.textSecondary.withValues(alpha: 0.1);
+  }
+
+  Color _textColor() {
+    final normalized = type.toLowerCase();
+    if (normalized.contains('postgres')) return AppColors.secondary;
+    if (normalized.contains('maria')) return AppColors.success;
+    if (normalized.contains('mysql')) return AppColors.warning;
+    if (normalized.contains('sql server') || normalized.contains('sqlserver') || normalized.contains('mssql')) {
+      return AppColors.primary;
+    }
+    if (normalized.contains('sqlite')) return AppColors.info;
+    return AppColors.textSecondary;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppStyles.paddingMedium,
+        vertical: AppStyles.paddingSmall / 2,
+      ),
+      decoration: BoxDecoration(
+        color: _backgroundColor(),
+        borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.data_object,
+            size: 16,
+            color: _textColor(),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            type,
+            style: AppStyles.bodySmall.copyWith(
+              color: _textColor(),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

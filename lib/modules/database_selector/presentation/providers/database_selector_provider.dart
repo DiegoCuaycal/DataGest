@@ -10,6 +10,7 @@ class DatabaseSelectorProvider extends ChangeNotifier {
 
   DatabaseInfoModel? _selectedDatabase;
   List<DatabaseInfoModel> _availableDatabases = [];
+  final List<DatabaseInfoModel> _importedDatabases = [];
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -25,11 +26,17 @@ class DatabaseSelectorProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _availableDatabases = await repository.getAvailableDatabases(useMock: useMock);
+      final remoteDatabases = await repository.getAvailableDatabases(useMock: useMock);
+      _availableDatabases = [..._importedDatabases, ...remoteDatabases];
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      if (_importedDatabases.isNotEmpty) {
+        _availableDatabases = [..._importedDatabases];
+        _errorMessage = null;
+      } else {
+        _errorMessage = e.toString();
+      }
       _isLoading = false;
       notifyListeners();
     }
@@ -48,6 +55,7 @@ class DatabaseSelectorProvider extends ChangeNotifier {
         id: 0,
         name: databaseName,
         description: 'Base de datos $databaseName',
+        type: 'SQL Server', // Tipo por defecto
       ),
     );
     _selectedDatabase = database;
@@ -64,15 +72,40 @@ class DatabaseSelectorProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> pickDatabaseFile() async {
+  DatabaseInfoModel addImportedDatabase(PickedDatabaseFile file) {
+    final importedDatabase = DatabaseInfoModel(
+      id: _generateTemporaryId(),
+      name: _deriveNameFromFile(file.name),
+      description: 'Importada desde ${file.name}',
+      type: file.detectedType,
+      isImported: true,
+      localPath: file.path,
+    );
+
+    _importedDatabases.insert(0, importedDatabase);
+    _availableDatabases = [importedDatabase, ..._availableDatabases];
+    _selectedDatabase = importedDatabase;
+    notifyListeners();
+    return importedDatabase;
+  }
+
+  Future<PickedDatabaseFile?> pickDatabaseFile() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['sql', 'db', 'csv'],
+        allowedExtensions: ['sql', 'db', 'csv', 'bak', 'sqlite', 'sqlite3', 'dump'],
       );
 
       if (result != null) {
-        return result.files.single.path;
+        final selectedFile = result.files.single;
+        final filePath = selectedFile.path ?? selectedFile.name;
+        final detectedType = _detectDatabaseType(selectedFile.name);
+
+        return PickedDatabaseFile(
+          path: filePath,
+          name: selectedFile.name,
+          detectedType: detectedType,
+        );
       } else {
         return null;
       }
@@ -82,4 +115,70 @@ class DatabaseSelectorProvider extends ChangeNotifier {
       return null;
     }
   }
+
+  String _detectDatabaseType(String fileName) {
+    final normalizedName = fileName.toLowerCase();
+    final extension = _extractExtension(normalizedName);
+
+    if (normalizedName.contains('postgres') || normalizedName.contains('pgsql') || extension == 'dump') {
+      return 'PostgreSQL';
+    }
+
+    if (normalizedName.contains('maria')) {
+      return 'MariaDB';
+    }
+
+    if (normalizedName.contains('mysql')) {
+      return 'MySQL';
+    }
+
+    if (normalizedName.contains('mssql') || normalizedName.contains('sqlserver') || extension == 'bak') {
+      return 'SQL Server';
+    }
+
+    if (extension == 'db' || extension == 'sqlite' || extension == 'sqlite3') {
+      return 'SQLite';
+    }
+
+    if (extension == 'csv') {
+      return 'CSV (Datos tabulares)';
+    }
+
+    if (extension == 'sql') {
+      return 'Script SQL';
+    }
+
+    return 'Tipo desconocido';
+  }
+
+  String _extractExtension(String fileName) {
+    final dotIndex = fileName.lastIndexOf('.');
+    if (dotIndex == -1 || dotIndex == fileName.length - 1) {
+      return '';
+    }
+    return fileName.substring(dotIndex + 1);
+  }
+
+  int _generateTemporaryId() => DateTime.now().millisecondsSinceEpoch * -1;
+
+  String _deriveNameFromFile(String fileName) {
+    final sanitized = fileName.split(RegExp(r'[\\/]')).last;
+    final dotIndex = sanitized.lastIndexOf('.');
+    if (dotIndex > 0) {
+      return sanitized.substring(0, dotIndex);
+    }
+    return sanitized;
+  }
+}
+
+class PickedDatabaseFile {
+  final String path;
+  final String name;
+  final String detectedType;
+
+  const PickedDatabaseFile({
+    required this.path,
+    required this.name,
+    required this.detectedType,
+  });
 }
