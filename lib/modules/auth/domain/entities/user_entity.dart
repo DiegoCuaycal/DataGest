@@ -1,4 +1,5 @@
-/// Entidad de usuario (capa de dominio)
+// Ubicación: lib/modules/auth/domain/entities/user_entity.dart
+
 class UserEntity {
   final int? id;
   final String? username;
@@ -7,6 +8,8 @@ class UserEntity {
   final String? role;
   final int? roleId;
   final String token;
+  // 1. AGREGA ESTE CAMPO
+  final String? moduloOrigen; 
 
   UserEntity({
     this.id,
@@ -16,6 +19,8 @@ class UserEntity {
     this.role,
     this.roleId,
     required this.token,
+    // 2. AGREGA ESTO AL CONSTRUCTOR
+    this.moduloOrigen, 
   });
 
   @override
@@ -29,7 +34,8 @@ class UserEntity {
         other.nombre == nombre &&
         other.role == role &&
         other.roleId == roleId &&
-        other.token == token;
+        other.token == token &&
+        other.moduloOrigen == moduloOrigen; // 3. AGREGA A COMPARACIÓN
   }
 
   @override
@@ -40,11 +46,7 @@ class UserEntity {
         nombre.hashCode ^
         role.hashCode ^
         roleId.hashCode ^
-        token.hashCode;
-  }
-
-  @override
-  String toString() {
-    return 'UserEntity(id: $id, email: $email, nombre: $nombre)';
+        token.hashCode ^
+        moduloOrigen.hashCode; // 4. AGREGA AL HASH
   }
 }

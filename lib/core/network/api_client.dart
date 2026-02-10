@@ -11,13 +11,15 @@ import 'api_endpoints.dart';
 class ApiClient {
   final http.Client _client;
   String? _authToken;
+  String? _connectionProfile;
 
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
-  /// Inicializa el cliente cargando el token almacenado
+  /// Inicializa el cliente cargando el token y perfil almacenados
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _authToken = prefs.getString(AppConfig.tokenKey);
+    _connectionProfile = prefs.getString(AppConfig.connectionProfileKey);
   }
 
   /// Establece el token de autenticación
@@ -37,6 +39,20 @@ class ApiClient {
   /// Verifica si el usuario está autenticado
   bool isAuthenticated() => _authToken != null && _authToken!.isNotEmpty;
 
+  /// Establece el perfil de conexión al servidor
+  Future<void> setConnectionProfile(String? profile) async {
+    _connectionProfile = profile;
+    final prefs = await SharedPreferences.getInstance();
+    if (profile != null) {
+      await prefs.setString(AppConfig.connectionProfileKey, profile);
+    } else {
+      await prefs.remove(AppConfig.connectionProfileKey);
+    }
+  }
+
+  /// Obtiene el perfil de conexión actual
+  String? getConnectionProfile() => _connectionProfile;
+
   /// Headers base para todas las peticiones
   Map<String, String> _getHeaders({
     bool includeAuth = true,
@@ -46,6 +62,11 @@ class ApiClient {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+
+    // Agregar perfil de conexión si está configurado
+    if (_connectionProfile != null && _connectionProfile!.isNotEmpty) {
+      headers['X-Connection-Profile'] = _connectionProfile!;
+    }
 
     if (includeAuth && _authToken != null) {
       headers['Authorization'] = 'Bearer $_authToken';

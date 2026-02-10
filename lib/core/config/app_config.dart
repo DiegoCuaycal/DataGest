@@ -8,6 +8,8 @@ class AppConfig {
 
   static const String tokenKey = 'auth_token';
 
+  static const String connectionProfileKey = 'connection_profile';
+
   static const String userKey = 'user_data';
 
   static const int splashDuration = 2000;

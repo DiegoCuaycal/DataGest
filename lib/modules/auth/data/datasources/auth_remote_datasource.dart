@@ -15,12 +15,10 @@ class AuthRemoteDataSource {
     String? databaseName,
   }) async {
     try {
-      // La API de Azure usa el endpoint /api/Auth/login para todas las bases de datos
-      // y requiere el nombre de la BD en el header X-DbName
       final endpoint = ApiEndpoints.login;
 
       print('🔐 Intentando login con usuario: $username');
-      print('🗄️  Base de datos: ${databaseName ?? "No especificada"}');
+      print('🗄️ Base de datos: ${databaseName ?? "No especificada (Modo Selección de Server)"}');
       print('📍 URL: ${ApiEndpoints.buildUrl(endpoint)}');
 
       // Preparar headers personalizados con las credenciales
@@ -29,10 +27,10 @@ class AuthRemoteDataSource {
         'X-Password': password,
       };
 
-      // Agregar el header X-DbName solo si se especifica una base de datos
-      if (databaseName != null && databaseName.isNotEmpty) {
-        headers['X-DbName'] = databaseName;
-      }
+      // Siempre enviar "master" para login (requerido por el backend)
+      // El SP sp_ValidarLoginFinal siempre corre en master,
+      // independientemente de la BD seleccionada por el usuario
+      headers['X-DbName'] = 'master';
 
       print('📤 Headers: ${headers.keys.join(", ")}');
 
@@ -44,29 +42,35 @@ class AuthRemoteDataSource {
 
       print('✅ Respuesta recibida: $response');
 
-      // La API de Azure devuelve solo el token en el formato: {"token": "jwt_token"}
-      // No devuelve información del usuario, solo el token
+      // Validamos que exista al menos el token
       if (response.containsKey('token')) {
-        final token = response['token'] as String;
+        
+        // 1. Parseamos la respuesta completa usando el Modelo actualizado
+        // Esto extraerá rol, moduloOrigen, email, etc. directamente del SP
+        final userModel = UserModel.fromJson(response);
 
-        // Crear un UserModel con la información disponible
-        // Como la API solo devuelve el token, usamos los datos que tenemos
-        final userModel = UserModel(
-          id: 1, // Se podría decodificar del JWT si es necesario
-          username: username,
-          email: '', // No disponible en la respuesta
-          nombre: username, // Usar username como nombre temporal
-          role: 'Usuario', // Rol por defecto
-          roleId: 1,
-          token: token,
-        );
+        // 2. Guardamos el token (necesario para ambos casos)
+        await apiClient.setAuthToken(userModel.token);
+        print('✅ Token guardado.');
 
-        await apiClient.setAuthToken(token);
-        print('✅ Login exitoso. Token guardado.');
+        // 3. Lógica Especial: Detección de Perfil de Conexión
+        // Si el login fue para configurar el servidor (Remote, Azure, etc.)
+        if (userModel.role == 'ProfileConnection') {
+          print('🌐 Perfil de conexión detectado: ${userModel.moduloOrigen}');
+          
+          if (userModel.moduloOrigen != null && userModel.moduloOrigen!.isNotEmpty) {
+            // Guardamos el perfil en SharedPreferences/Memoria del ApiClient
+            // Esto asegura que la próxima petición (listar BDs) lleve el header X-Connection-Profile
+            await apiClient.setConnectionProfile(userModel.moduloOrigen!);
+            print('✅ Header X-Connection-Profile configurado a: ${userModel.moduloOrigen}');
+          }
+        }
+
         return userModel;
       }
 
-      throw Exception('Respuesta inválida del servidor');
+      throw Exception('La respuesta del servidor no contiene un token válido.');
+      
     } catch (e) {
       print('❌ Error en login: $e');
       rethrow;
@@ -85,6 +89,9 @@ class AuthRemoteDataSource {
     } finally {
       // Siempre limpiar el token localmente
       await apiClient.setAuthToken(null);
+      // Opcional: ¿Quieres limpiar el ConnectionProfile al hacer logout?
+      // Generalmente NO, para que el usuario no tenga que re-elegir servidor.
+      // await apiClient.setConnectionProfile(null); 
     }
   }
 
@@ -125,11 +132,10 @@ class AuthRemoteDataSource {
         role: 'Administrador',
         roleId: 1,
         token: 'mock_jwt_token_${DateTime.now().millisecondsSinceEpoch}',
+        moduloOrigen: 'Local',
       );
 
-      // Guardar el token en el cliente API
       await apiClient.setAuthToken(mockUser.token);
-
       return mockUser;
     } else {
       throw Exception('Credenciales incorrectas');

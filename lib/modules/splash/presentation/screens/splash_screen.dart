@@ -6,7 +6,6 @@ import 'package:herramienta_case/core/config/routes.dart';
 import 'package:herramienta_case/core/config/app_build_config.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
 import 'package:herramienta_case/modules/database_selector/data/models/database_info_model.dart';
-// import 'package:lottie/lottie.dart'; // Descomenta si usas lottie en el futuro
 
 /// Pantalla de inicio profesional con animación de carga
 class SplashScreen extends StatefulWidget {
@@ -121,36 +120,28 @@ void _startSplashSequence() async {
 
     if (!mounted) return;
 
-    // ========== LÓGICA DE ARRANQUE INTELIGENTE (V2) ==========
-    
-    // 1. Verificamos si la App fue compilada para un cliente específico
+    // ========== LÓGICA DE ARRANQUE INTELIGENTE (V3) ==========
+
     if (AppBuildConfig.isPreConfigured) {
-      
-      // MODO PRE-CONFIGURADO: (Ej: APK de "Productos")
+      // MODO PRE-CONFIGURADO: BD inyectada por C# -> Login directo
       final databaseName = AppBuildConfig.defaultDatabaseName;
-      debugPrint('🎯 Modo Pre-Configurado detectado: Base "$databaseName"');
+      debugPrint('Modo Pre-Configurado detectado: Base "$databaseName"');
 
-      // 2. Inyectamos la base de datos en el Provider Global
-      final dbProvider = context.read<DatabaseSelectorProvider>();
-      
-      // --- CORRECCIÓN AQUÍ ---
-      // Como el provider pide un OBJETO DatabaseInfoModel, creamos uno temporal 
-      // usando el nombre que tenemos. El ID es irrelevante en este punto (ponemos 0).
-      dbProvider.selectDatabase(
+      context.read<DatabaseSelectorProvider>().selectDatabase(
         DatabaseInfoModel(
-          id: 0, // ID Dummy (no se usa para conectar, solo importa el nombre)
-          name: databaseName, 
+          id: 0,
+          name: databaseName,
           description: 'Pre-configured App',
-        )
-      ); 
+        ),
+      );
 
-      // 3. Navegación Directa al Login
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-      
+
     } else {
-      // MODO GENÉRICO: (Desarrollo o App Maestra)
-      debugPrint('🔄 Modo Genérico: Mostrando selector de bases de datos');
-      Navigator.of(context).pushReplacementNamed(AppRoutes.selectDatabase);
+      // MODO GENÉRICO: Login primero (perfil de conexión),
+      // luego login_form detecta ProfileConnection y redirige al selector de BD.
+      debugPrint('Modo Genérico: Mostrando login');
+      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
     }
   }
 

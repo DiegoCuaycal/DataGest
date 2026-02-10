@@ -70,7 +70,10 @@ void main() async {
     exportService: exportService,
   );
 
+
+
   runApp(MyApp(
+    apiClient: apiClient,
     authRepository: authRepository,
     databaseRepository: databaseRepository,
     databaseCreatorRepository: databaseCreatorRepository,
@@ -80,6 +83,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  final ApiClient apiClient;
   final AuthRepository authRepository;
   final DatabaseRepository databaseRepository;
   final DatabaseCreatorRepository databaseCreatorRepository;
@@ -88,6 +92,7 @@ class MyApp extends StatelessWidget {
 
   const MyApp({
     super.key,
+    required this.apiClient,
     required this.authRepository,
     required this.databaseRepository,
     required this.databaseCreatorRepository,

@@ -19,26 +19,33 @@ class DynamicRemoteDataSource {
   // URL Base para V2
   String get _v2BaseUrl => '${ApiEndpoints.baseUrl}/api/DynamicCrud/V2';
 
+  // Headers comunes para todas las peticiones (compatibilidad con ngrok)
+  Map<String, String> _buildHeaders(String token) => {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': 'Bearer $token',
+    'ngrok-skip-browser-warning': 'true',
+  };
+
   // --- 1. METADATA (V1 - Se mantiene igual) ---
   Future<DatabaseMetadataModel> getMetadata({
     required String databaseName,
     required String token,
   }) async {
-    // ... (Mantén tu código original de getMetadata aquí, es correcto) ...
-    // Para abreviar aquí, asumo que copias tu lógica de reintentos existente.
-    // ...
-    // COPIA TU MÉTODO getMetadata ORIGINAL AQUÍ
     final url = '${ApiEndpoints.baseUrl}${ApiEndpoints.metadata(databaseName)}';
     print('📊 Solicitando metadata: $databaseName');
+    print('📍 URL: $url');
     final response = await client.get(
       Uri.parse(url),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      headers: _buildHeaders(token),
     ).timeout(_timeout);
 
+    print('📡 Metadata status: ${response.statusCode}');
     if (response.statusCode == 200) {
       return DatabaseMetadataModel.fromJson(jsonDecode(response.body));
     }
-    throw Exception('Error loading metadata');
+    print('❌ Metadata error body: ${response.body}');
+    throw Exception('Error loading metadata (${response.statusCode}): ${response.body}');
   }
 
   // --- 2. GET ALL (V2 - Actualizado) ---
@@ -61,7 +68,7 @@ class DynamicRemoteDataSource {
 
       final response = await client.post(
         uri,
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: _buildHeaders(token),
         body: jsonEncode(requestBody.toJson()),
       ).timeout(_timeout);
 
@@ -164,7 +171,7 @@ class DynamicRemoteDataSource {
 
       final response = await client.post(
         uri,
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: _buildHeaders(token),
         body: jsonEncode(requestBody.toJson()),
       ).timeout(_timeout);
 
@@ -201,7 +208,7 @@ class DynamicRemoteDataSource {
 
       final response = await client.post(
         uri,
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: _buildHeaders(token),
         body: jsonEncode(requestBody.toJson()),
       ).timeout(_timeout);
 
@@ -232,7 +239,7 @@ class DynamicRemoteDataSource {
 
       final response = await client.post(
         uri,
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: _buildHeaders(token),
         // GETBYID solo envía el Schema, no el wrapper completo con Data
         body: jsonEncode(v2Schema.toJson()), 
       ).timeout(_timeout);
@@ -265,13 +272,12 @@ class DynamicRemoteDataSource {
 
       print('🗑️ Eliminando registro (Legacy): $endpoint');
 
+      final deleteHeaders = _buildHeaders(token);
+      deleteHeaders['X-DbName'] = dbHeaderValue;
+
       final response = await client.delete(
         Uri.parse('${ApiEndpoints.baseUrl}$endpoint'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'X-DbName': dbHeaderValue,
-        },
+        headers: deleteHeaders,
       ).timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -381,13 +387,12 @@ class DynamicRemoteDataSource {
       print('📋 Cargando dropdown desde: $endpoint');
       print('🗄️  Header X-DbName: $dbHeaderValue');
 
+      final dropdownHeaders = _buildHeaders(token);
+      dropdownHeaders['X-DbName'] = dbHeaderValue;
+
       final response = await client.get(
         Uri.parse('${ApiEndpoints.baseUrl}$endpoint'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'X-DbName': dbHeaderValue,
-        },
+        headers: dropdownHeaders,
       ).timeout(_timeout);
 
       print('📡 Status Code: ${response.statusCode}');

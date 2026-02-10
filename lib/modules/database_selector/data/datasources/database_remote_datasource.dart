@@ -12,7 +12,11 @@ class DatabaseRemoteDataSource {
     try {
       final response = await client.get(
         Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.databases}'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
 
       if (response.statusCode == 200) {

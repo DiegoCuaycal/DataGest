@@ -10,6 +10,7 @@ class UserModel extends UserEntity {
     super.role,
     super.roleId,
     required super.token,
+    super.moduloOrigen, 
   });
 
   /// Crea una instancia desde JSON
@@ -22,6 +23,7 @@ class UserModel extends UserEntity {
       role: json['role'] ?? json['rol'],
       roleId: json['roleId'] ?? json['rol_id'],
       token: json['token'] as String,
+      moduloOrigen: json['moduloOrigen'] ?? json['ModuloOrigen'], 
     );
   }
 
@@ -35,6 +37,7 @@ class UserModel extends UserEntity {
       'role': role,
       'roleId': roleId,
       'token': token,
+      'moduloOrigen': moduloOrigen, 
     };
   }
 
@@ -47,6 +50,7 @@ class UserModel extends UserEntity {
     String? role,
     int? roleId,
     String? token,
+    String? moduloOrigen, 
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -56,6 +60,7 @@ class UserModel extends UserEntity {
       role: role ?? this.role,
       roleId: roleId ?? this.roleId,
       token: token ?? this.token,
+      moduloOrigen: moduloOrigen ?? this.moduloOrigen, 
     );
   }
 
@@ -69,6 +74,7 @@ class UserModel extends UserEntity {
       role: role,
       roleId: roleId,
       token: token,
+      moduloOrigen: moduloOrigen, 
     );
   }
 
@@ -82,11 +88,12 @@ class UserModel extends UserEntity {
       role: entity.role,
       roleId: entity.roleId,
       token: entity.token,
+      moduloOrigen: entity.moduloOrigen, 
     );
   }
 
   @override
   String toString() {
-    return 'UserModel(id: $id, email: $email, nombre: $nombre)';
+    return 'UserModel(id: $id, role: $role, modulo: $moduloOrigen)';
   }
 }
