@@ -5,6 +5,7 @@ import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/utils/helpers.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import 'package:herramienta_case/core/config/routes.dart';
+import 'package:herramienta_case/core/config/app_build_config.dart';
 import 'package:herramienta_case/core/services/loading_overlay_service.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 import 'package:herramienta_case/modules/database_selector/presentation/providers/database_selector_provider.dart';
@@ -68,19 +69,18 @@ class _LoginFormState extends State<LoginForm> {
         final userRole = authProvider.currentUser?.role;
         final modulo = authProvider.currentUser?.moduloOrigen;
 
-        if (userRole == 'ProfileConnection') {
-          // CASO 1: Configuración de Servidor (Remote, Azure, etc.)
+        if (userRole == 'ProfileConnection' && !AppBuildConfig.isPreConfigured) {
+          // CASO 1: Configuración de Servidor (solo en modo GENÉRICO)
+          // En APK pre-configurada la BD ya fue inyectada por C#, no redirigir al selector
           NotificationService.showSuccess(
-            context, 
+            context,
             'Perfil "$modulo" configurado correctamente'
           );
-          // Navegar a la selección de Base de Datos
           AppRoutes.navigateAndRemoveUntil(context, AppRoutes.selectDatabase);
-        
+
         } else {
-          // CASO 2: Login de Usuario Normal
+          // CASO 2: Login normal O APK pre-configurada → siempre al Home
           NotificationService.showSuccess(context, AppStrings.successLogin);
-          // Navegar al Home
           AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
         }
 

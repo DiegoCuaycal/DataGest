@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/env_config.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_response.dart';
 import '../../../../core/network/endpoint_mapper.dart';
@@ -11,21 +12,39 @@ import 'schema_adapter.dart'; // <--- IMPORTANTE
 
 class DynamicRemoteDataSource {
   final http.Client client;
+  final ApiClient? apiClient;
 
-  DynamicRemoteDataSource({required this.client});
+  DynamicRemoteDataSource({required this.client, this.apiClient});
 
   Duration get _timeout => Duration(seconds: EnvConfig.apiTimeout);
-  
+
   // URL Base para V2
   String get _v2BaseUrl => '${ApiEndpoints.baseUrl}/api/DynamicCrud/V2';
 
   // Headers comunes para todas las peticiones (compatibilidad con ngrok)
-  Map<String, String> _buildHeaders(String token) => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Authorization': 'Bearer $token',
-    'ngrok-skip-browser-warning': 'true',
-  };
+  // Incluye X-Connection-Profile y X-DbName para que el backend sepa
+  // a qué servidor y base de datos conectarse
+  Map<String, String> _buildHeaders(String token, {String? databaseName}) {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+      'ngrok-skip-browser-warning': 'true',
+    };
+
+    // Agregar perfil de conexión si está disponible en ApiClient
+    final connectionProfile = apiClient?.getConnectionProfile();
+    if (connectionProfile != null && connectionProfile.isNotEmpty) {
+      headers['X-Connection-Profile'] = connectionProfile;
+    }
+
+    // Agregar nombre de base de datos si se proporciona
+    if (databaseName != null && databaseName.isNotEmpty) {
+      headers['X-DbName'] = databaseName;
+    }
+
+    return headers;
+  }
 
   // --- 1. METADATA (V1 - Se mantiene igual) ---
   Future<DatabaseMetadataModel> getMetadata({
@@ -37,7 +56,7 @@ class DynamicRemoteDataSource {
     print('📍 URL: $url');
     final response = await client.get(
       Uri.parse(url),
-      headers: _buildHeaders(token),
+      headers: _buildHeaders(token, databaseName: databaseName),
     ).timeout(_timeout);
 
     print('📡 Metadata status: ${response.statusCode}');
@@ -68,7 +87,7 @@ class DynamicRemoteDataSource {
 
       final response = await client.post(
         uri,
-        headers: _buildHeaders(token),
+        headers: _buildHeaders(token, databaseName: metadata.databaseName),
         body: jsonEncode(requestBody.toJson()),
       ).timeout(_timeout);
 
@@ -76,7 +95,7 @@ class DynamicRemoteDataSource {
 
       if (response.statusCode == 200) {
         final dynamic jsonData = jsonDecode(response.body);
-        
+
         // Manejar estructura { message: "...", rowsAffected: [...] }
         if (jsonData is Map && jsonData.containsKey('rowsAffected')) {
            return (jsonData['rowsAffected'] as List).cast<Map<String, dynamic>>();
@@ -171,7 +190,7 @@ class DynamicRemoteDataSource {
 
       final response = await client.post(
         uri,
-        headers: _buildHeaders(token),
+        headers: _buildHeaders(token, databaseName: metadata.databaseName),
         body: jsonEncode(requestBody.toJson()),
       ).timeout(_timeout);
 
@@ -208,7 +227,7 @@ class DynamicRemoteDataSource {
 
       final response = await client.post(
         uri,
-        headers: _buildHeaders(token),
+        headers: _buildHeaders(token, databaseName: metadata.databaseName),
         body: jsonEncode(requestBody.toJson()),
       ).timeout(_timeout);
 
@@ -239,9 +258,9 @@ class DynamicRemoteDataSource {
 
       final response = await client.post(
         uri,
-        headers: _buildHeaders(token),
+        headers: _buildHeaders(token, databaseName: metadata.databaseName),
         // GETBYID solo envía el Schema, no el wrapper completo con Data
-        body: jsonEncode(v2Schema.toJson()), 
+        body: jsonEncode(v2Schema.toJson()),
       ).timeout(_timeout);
 
       if (response.statusCode == 200) {

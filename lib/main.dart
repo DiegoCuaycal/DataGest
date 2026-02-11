@@ -59,7 +59,7 @@ void main() async {
     remoteDataSource: databaseCreatorRemoteDataSource,
   );
 
-  final dynamicRemoteDataSource = DynamicRemoteDataSource(client: httpClient);
+  final dynamicRemoteDataSource = DynamicRemoteDataSource(client: httpClient, apiClient: apiClient);
   final dynamicCrudRepository = DynamicCrudRepository(
     remoteDataSource: dynamicRemoteDataSource,
   );
