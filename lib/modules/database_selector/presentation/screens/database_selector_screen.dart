@@ -1,15 +1,13 @@
-import 'dart:convert'; // Para jsonEncode
-import 'dart:io'; // Para leer el archivo
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart'; // Para seleccionar el archivo
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:herramienta_case/core/constants/app_colors.dart';
 import 'package:herramienta_case/core/constants/app_styles.dart';
 import 'package:herramienta_case/core/utils/notification_service.dart';
 import '../providers/database_selector_provider.dart';
 import '../widgets/database_card.dart';
-
-// --- IMPORTS NUEVOS DE TU LÓGICA ---
 import 'package:herramienta_case/modules/dynamic_crud/domain/services/sql_parser_service.dart';
 import 'package:herramienta_case/modules/auth/presentation/providers/auth_provider.dart';
 
@@ -25,26 +23,26 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Cargar bases de datos desde la API al iniciar
       context.read<DatabaseSelectorProvider>().loadAvailableDatabases(useMock: false);
     });
   }
 
-  // ===========================================================================
-  // LÓGICA DE IMPORTACIÓN (EL CEREBRO NUEVO)
-  // ===========================================================================
+  /// Prompts the user to pick a `.sql` or `.txt` file, parses it into the
+  /// backend schema format, and sends it to the API to provision a new
+  /// database module.
+  ///
+  /// Compatible with both local files and cloud-sourced files (e.g. Google
+  /// Drive) by reading raw bytes when a file path is unavailable.
   Future<void> _handleImportDatabase() async {
     try {
-      // 1. SELECCIONAR ARCHIVO (Lógica corregida para Drive/Android)
       FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.any,  // Permite seleccionar desde Drive
-        withData: true,      // CRÍTICO: Obtiene los bytes en memoria
+        type: FileType.any,
+        withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
         final pickedFile = result.files.single;
 
-        // Validar extensión manualmente (porque usamos FileType.any)
         final fileName = pickedFile.name.toLowerCase();
         final validExtensions = ['.sql', '.txt'];
         final hasValidExtension = validExtensions.any((ext) => fileName.endsWith(ext));
@@ -53,7 +51,7 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
           if (mounted) {
             NotificationService.showError(
               context,
-              '⚠️ Solo se permiten archivos .sql o .txt\nSeleccionaste: ${pickedFile.name}',
+              'Solo se permiten archivos .sql o .txt\nSeleccionaste: ${pickedFile.name}',
             );
           }
           return;
@@ -63,19 +61,16 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('📂 Procesando y enviando archivo...'),
+            content: Text('Procesando y enviando archivo...'),
             backgroundColor: AppColors.primary,
           ),
         );
 
-        // 2. LEER CONTENIDO (Compatible con Drive)
         String content;
 
         if (pickedFile.bytes != null) {
-          // Archivo de Drive/Cloud - decodificar bytes
           content = utf8.decode(pickedFile.bytes!, allowMalformed: true);
         } else if (pickedFile.path != null) {
-          // Archivo local físico - leer desde path
           final file = File(pickedFile.path!);
           content = await file.readAsString();
         } else {
@@ -84,48 +79,34 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
 
         final dbName = pickedFile.name.split('.').first;
 
-        // 3. EL TRADUCTOR (Parser)
-        // Esto devuelve: { "database_name": "...", "tables": [...], "columns": [...], "pk_Info": [...] }
         final schemaMap = SqlParserService.parseSqlToSchemaMap(content, dbName);
-
-        // ============================================================
-        // 🔴 4. EMPAQUETADO (LA CORRECCIÓN ESTÁ AQUÍ)
-        // ============================================================
-        // NO extraigas ['tables']. Codifica el MAPA COMPLETO.
         final jsonTablasString = jsonEncode(schemaMap);
-
-        // DEBUG: Debe empezar con llave { NO con corchete [
-        debugPrint("📦 JSON COMPLETO A ENVIAR: $jsonTablasString");
 
         if (!mounted) return;
 
-        // 5. EL ENVÍO
         final authProvider = context.read<AuthProvider>();
 
         final success = await authProvider.createModule(
           dbName: dbName,
-          jsonTables: jsonTablasString // Enviamos el objeto completo
+          jsonTables: jsonTablasString,
         );
 
         if (!mounted) return;
 
-        // 6. RESULTADO
         if (success) {
           NotificationService.showSuccess(
             context,
-            '✅ Base de datos "$dbName" creada exitosamente',
+            'Base de datos "$dbName" creada exitosamente',
           );
-          // Recargar lista
           context.read<DatabaseSelectorProvider>().loadAvailableDatabases(useMock: false);
         } else {
           NotificationService.showError(
             context,
-            '❌ Error al crear la base de datos (Backend rechazó el formato)',
+            'Error al crear la base de datos',
           );
         }
       }
     } catch (e) {
-      debugPrint("Error importando: $e");
       if (mounted) {
         NotificationService.showError(
           context,
@@ -134,7 +115,6 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
       }
     }
   }
-  // ===========================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -317,11 +297,9 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
           );
         },
       ),
-      // --- DOS BOTONES FLOTANTES ---
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // BOTÓN IMPORTAR BD (nuevo)
           FloatingActionButton.extended(
             heroTag: 'importar_bd',
             onPressed: _handleImportDatabase,
@@ -332,7 +310,6 @@ class _DatabaseSelectorScreenState extends State<DatabaseSelectorScreen> {
             tooltip: 'Importar archivo SQL o TXT',
           ),
           const SizedBox(height: 12),
-          // BOTÓN CREAR BD (original - intocable)
           FloatingActionButton.extended(
             heroTag: 'crear_bd',
             onPressed: () {

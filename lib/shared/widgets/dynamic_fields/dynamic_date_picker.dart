@@ -34,41 +34,25 @@ class _DynamicDatePickerState extends State<DynamicDatePicker> {
   void initState() {
     super.initState();
 
-    print('🗓️ DatePicker - Inicializando para campo: ${widget.label}');
-    print('   initialValue recibido: ${widget.initialValue} (tipo: ${widget.initialValue.runtimeType})');
-
     if (widget.initialValue != null) {
       if (widget.initialValue is DateTime) {
         final date = widget.initialValue as DateTime;
-        print('   📅 Es DateTime: $date (año: ${date.year})');
-        // Validar que la fecha no sea la fecha por defecto de C# (0001-01-01)
-        // y que esté dentro del rango válido (1900-2100)
+        // Ignore the C# default date (year 1) and clamp to the supported range.
         if (date.year >= 1900 && date.year <= 2100) {
           _selectedDate = date;
           _selectedTime = TimeOfDay.fromDateTime(_selectedDate!);
-          print('   ✅ Fecha válida, establecida: $_selectedDate');
-        } else {
-          print('   ❌ Fecha fuera del rango válido (${date.year} no está entre 1900-2100)');
         }
       } else if (widget.initialValue is String) {
         final dateStr = widget.initialValue as String;
-        print('   📝 Es String: "$dateStr"');
         final date = DateTime.tryParse(dateStr);
-        print('   🔄 Parseado a: $date');
         if (date != null && date.year >= 1900 && date.year <= 2100) {
           _selectedDate = date;
           _selectedTime = TimeOfDay.fromDateTime(_selectedDate!);
-          print('   ✅ Fecha válida, establecida: $_selectedDate');
-        } else {
-          print('   ❌ Fecha inválida o fuera de rango');
         }
       }
-    } else {
-      print('   ⚠️ initialValue es null');
     }
 
     _controller = TextEditingController(text: _formatDateTime(_selectedDate));
-    print('   📝 Texto del controlador: "${_controller.text}"');
   }
 
   @override
@@ -87,7 +71,6 @@ class _DynamicDatePickerState extends State<DynamicDatePicker> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    // Asegurar que initialDate esté dentro del rango válido
     DateTime initialDate;
     if (_selectedDate != null &&
         _selectedDate!.year >= 1900 &&

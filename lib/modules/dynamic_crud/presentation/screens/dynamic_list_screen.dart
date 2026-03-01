@@ -47,20 +47,17 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final authProvider = context.read<AuthProvider>();
-    final metadataProvider = context.read<MetadataProvider>(); // <--- 1. OBTENER METADATA
+    final metadataProvider = context.read<MetadataProvider>();
 
-    // Validar que exista la metadata antes de intentar cargar
     if (metadataProvider.metadata == null) {
-        print("⚠️ Error: Intentando cargar lista sin metadata disponible.");
-        return;
+      return;
     }
 
     if (dbProvider.currentDatabaseName != null) {
       final token = authProvider.currentUser?.token ?? '';
-      print('🔐 Token del usuario: ${token.isEmpty ? "VACÍO" : "${token.substring(0, 20)}..."}');
 
       crudProvider.loadTableRecords(
-        metadata: metadataProvider.metadata!, // <--- 2. PASAR METADATA (CORRECCIÓN)
+        metadata: metadataProvider.metadata!,
         databaseName: dbProvider.currentDatabaseName!,
         tableName: widget.tableName,
         token: token,
@@ -84,12 +81,12 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final crudProvider = context.read<DynamicCrudProvider>();
     final authProvider = context.read<AuthProvider>();
-    final metadataProvider = context.read<MetadataProvider>(); // <--- 1. OBTENER METADATA
+    final metadataProvider = context.read<MetadataProvider>();
 
     if (dbProvider.currentDatabaseName != null && metadataProvider.metadata != null) {
       crudProvider.setSearchTerm(searchTerm);
       crudProvider.loadTableRecords(
-        metadata: metadataProvider.metadata!, // <--- 2. PASAR METADATA (CORRECCIÓN)
+        metadata: metadataProvider.metadata!,
         databaseName: dbProvider.currentDatabaseName!,
         tableName: widget.tableName,
         token: authProvider.currentUser?.token ?? '',
@@ -98,8 +95,9 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     }
   }
 
-  /// 🚨 FUNCIÓN SABUESO 🚨
-  /// Busca el valor de una columna aunque el nombre venga diferente (Mayúsculas/Minúsculas)
+  /// Returns the value for [columnName] in [record], falling back to
+  /// case- and underscore-insensitive key matching when an exact key is
+  /// not present.
   dynamic _getValueFuzzy(Map<String, dynamic> record, String columnName) {
     if (record.containsKey(columnName)) return record[columnName];
     final cleanCol = columnName.replaceAll('_', '').toLowerCase();
@@ -112,7 +110,11 @@ class _DynamicListScreenState extends State<DynamicListScreen> {
     return null;
   }
 
-  /// FUNCIÓN PARA MOSTRAR INFORMACIÓN DESCRIPTIVA DE FOREIGN KEYS
+  /// Returns a human-readable display string for [columnName] in [record].
+  ///
+  /// For foreign-key columns (those ending in `_id`) this attempts to
+  /// resolve a descriptive field from the same record before falling back
+  /// to the raw numeric value.
   String _getDisplayValue(Map<String, dynamic> record, String columnName) {
     final value = _getValueFuzzy(record, columnName);
 

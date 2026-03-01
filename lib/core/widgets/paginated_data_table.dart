@@ -249,25 +249,17 @@ class PaginatedDataTableExample extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.edit, size: 18),
               color: AppColors.primary,
-              onPressed: () {
-                // Acción de editar
-                debugPrint('Editar usuario ${user.id}');
-              },
+              onPressed: () {},
               tooltip: 'Editar',
             ),
             IconButton(
               icon: const Icon(Icons.delete, size: 18),
               color: AppColors.error,
-              onPressed: () {
-                // Acción de eliminar
-                debugPrint('Eliminar usuario ${user.id}');
-              },
+              onPressed: () {},
               tooltip: 'Eliminar',
             ),
           ],
-          onRowTap: (user) {
-            debugPrint('Clic en usuario: ${user.name}');
-          },
+          onRowTap: (user) {},
           itemsPerPage: 10,
           showRowIndex: true,
           alternateRowColors: true,

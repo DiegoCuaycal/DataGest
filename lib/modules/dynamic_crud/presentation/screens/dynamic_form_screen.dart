@@ -5,7 +5,6 @@ import '../providers/dynamic_crud_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../../../database_selector/presentation/providers/database_selector_provider.dart';
 import '../../../home/presentation/providers/recent_activity_provider.dart';
-import '../../../notifications/presentation/providers/notification_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/services/form_generator_service.dart';
 import '../../data/models/column_info_model.dart'; 
@@ -63,15 +62,13 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final metadataProvider = context.read<MetadataProvider>();
     final token = authProvider.currentUser?.token ?? '';
 
-    // Validar que tengamos la metadata antes de llamar
     if (metadataProvider.metadata == null) {
-       print("❌ Error: No hay metadata cargada para cargar el registro");
-       return;
+      return;
     }
 
     if (dbProvider.currentDatabaseName != null && widget.recordId != null) {
       await crudProvider.loadTableRecord(
-        metadata: metadataProvider.metadata!, // <--- CORRECCIÓN 1: Pasar metadata
+        metadata: metadataProvider.metadata!,
         databaseName: dbProvider.currentDatabaseName!,
         tableName: widget.tableName,
         id: widget.recordId!,
@@ -92,18 +89,14 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
 
   void _populateFormData(List<ColumnInfoModel> columns, Map<String, dynamic> initialData) {
     _formData.clear();
-    print('📝 Poblando _formData con initialData: ${initialData.keys.toList()}');
 
     for (var col in columns) {
       final val = _getValueFuzzy(initialData, col.name);
 
       if (!col.isIdentity) {
         _formData[col.name] = val;
-        print('   ${col.name} = $val');
       }
     }
-
-    print('✅ _formData final: ${_formData.keys.toList()}');
   }
 
   Future<void> _saveRecord() async {
@@ -149,7 +142,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     final authProvider = context.read<AuthProvider>();
     final token = authProvider.currentUser?.token ?? '';
 
-    // Validar metadata
     if (metadataProvider.metadata == null) {
         LoadingOverlayService.hide();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -173,7 +165,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
     try {
       if (widget.isEdit && widget.recordId != null) {
         success = await crudProvider.updateRecord(
-          metadata: metadataProvider.metadata!, // <--- CORRECCIÓN 2: Pasar metadata
+          metadata: metadataProvider.metadata!,
           databaseName: dbProvider.currentDatabaseName!,
           tableName: widget.tableName,
           id: widget.recordId!,
@@ -182,7 +174,7 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
         );
       } else {
         success = await crudProvider.createRecord(
-          metadata: metadataProvider.metadata!, // <--- CORRECCIÓN 3: Pasar metadata
+          metadata: metadataProvider.metadata!,
           databaseName: dbProvider.currentDatabaseName!,
           tableName: widget.tableName,
           data: preparedData,
@@ -200,9 +192,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
               action: widget.isEdit ? 'update' : 'create',
             );
 
-        final notificationProvider = context.read<NotificationProvider>();
-        // ... (Tu lógica de notificaciones sigue igual) ...
-        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -212,7 +201,6 @@ class _DynamicFormScreenState extends State<DynamicFormScreen> {
           Navigator.pop(context, true);
         }
       } else {
-        // ... (Manejo de errores igual) ...
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(crudProvider.errorMessage ?? 'Error al guardar')),

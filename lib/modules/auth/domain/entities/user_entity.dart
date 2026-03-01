@@ -1,5 +1,3 @@
-// Ubicación: lib/modules/auth/domain/entities/user_entity.dart
-
 class UserEntity {
   final int? id;
   final String? username;
@@ -8,8 +6,7 @@ class UserEntity {
   final String? role;
   final int? roleId;
   final String token;
-  // 1. AGREGA ESTE CAMPO
-  final String? moduloOrigen; 
+  final String? moduloOrigen;
 
   UserEntity({
     this.id,
@@ -19,8 +16,7 @@ class UserEntity {
     this.role,
     this.roleId,
     required this.token,
-    // 2. AGREGA ESTO AL CONSTRUCTOR
-    this.moduloOrigen, 
+    this.moduloOrigen,
   });
 
   @override
@@ -35,7 +31,7 @@ class UserEntity {
         other.role == role &&
         other.roleId == roleId &&
         other.token == token &&
-        other.moduloOrigen == moduloOrigen; // 3. AGREGA A COMPARACIÓN
+        other.moduloOrigen == moduloOrigen;
   }
 
   @override
@@ -47,6 +43,6 @@ class UserEntity {
         role.hashCode ^
         roleId.hashCode ^
         token.hashCode ^
-        moduloOrigen.hashCode; // 4. AGREGA AL HASH
+        moduloOrigen.hashCode;
   }
 }

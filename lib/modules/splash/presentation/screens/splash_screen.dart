@@ -120,12 +120,8 @@ void _startSplashSequence() async {
 
     if (!mounted) return;
 
-    // ========== LÓGICA DE ARRANQUE INTELIGENTE (V3) ==========
-
     if (AppBuildConfig.isPreConfigured) {
-      // MODO PRE-CONFIGURADO: BD inyectada por C# -> Login directo
       final databaseName = AppBuildConfig.defaultDatabaseName;
-      debugPrint('Modo Pre-Configurado detectado: Base "$databaseName"');
 
       context.read<DatabaseSelectorProvider>().selectDatabase(
         DatabaseInfoModel(
@@ -136,11 +132,7 @@ void _startSplashSequence() async {
       );
 
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-
     } else {
-      // MODO GENÉRICO: Login primero (perfil de conexión),
-      // luego login_form detecta ProfileConnection y redirige al selector de BD.
-      debugPrint('Modo Genérico: Mostrando login');
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
     }
   }

@@ -3,28 +3,32 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:herramienta_case/modules/notifications/domain/models/notification_model.dart';
 
-/// Provider para manejar el estado de las notificaciones
+/// ChangeNotifier that manages the in-app notification list.
+///
+/// Notifications are persisted to [SharedPreferences] so they survive
+/// app restarts. The list is capped at [_maxNotifications] entries.
 class NotificationProvider extends ChangeNotifier {
   static const String _storageKey = 'app_notifications';
-  static const int _maxNotifications = 50; // Límite de notificaciones almacenadas
+  static const int _maxNotifications = 50;
 
   final List<NotificationModel> _notifications = [];
   bool _isInitialized = false;
 
-  /// Obtiene todas las notificaciones
+  /// All notifications in chronological order (newest first).
   List<NotificationModel> get notifications => List.unmodifiable(_notifications);
 
-  /// Obtiene las notificaciones no leídas
+  /// Notifications that have not yet been read.
   List<NotificationModel> get unreadNotifications =>
       _notifications.where((n) => !n.isRead).toList();
 
-  /// Obtiene el contador de notificaciones no leídas
+  /// Number of unread notifications.
   int get unreadCount => unreadNotifications.length;
 
-  /// Indica si hay notificaciones no leídas
+  /// `true` if there is at least one unread notification.
   bool get hasUnread => unreadCount > 0;
 
-  /// Inicializa el provider cargando las notificaciones guardadas
+  /// Loads persisted notifications from storage and seeds a welcome
+  /// notification on the first run.
   Future<void> init() async {
     if (_isInitialized) return;
 
@@ -40,7 +44,6 @@ class NotificationProvider extends ChangeNotifier {
         );
       }
 
-      // Agregar notificación de bienvenida si no hay notificaciones
       if (_notifications.isEmpty) {
         await addNotification(
           title: 'Bienvenido',
@@ -51,12 +54,13 @@ class NotificationProvider extends ChangeNotifier {
 
       _isInitialized = true;
       notifyListeners();
-    } catch (e) {
-      debugPrint('Error al inicializar notificaciones: $e');
+    } catch (_) {
+      // Initialisation errors are non-fatal; the app continues with an
+      // empty notification list.
     }
   }
 
-  /// Agrega una nueva notificación
+  /// Adds a new notification and persists the updated list.
   Future<void> addNotification({
     required String title,
     required String message,
@@ -77,19 +81,18 @@ class NotificationProvider extends ChangeNotifier {
 
       _notifications.insert(0, notification);
 
-      // Limitar el número de notificaciones
       if (_notifications.length > _maxNotifications) {
         _notifications.removeRange(_maxNotifications, _notifications.length);
       }
 
       await _saveNotifications();
       notifyListeners();
-    } catch (e) {
-      debugPrint('Error al agregar notificación: $e');
+    } catch (_) {
+      // Persistence errors are non-fatal; the in-memory list is still updated.
     }
   }
 
-  /// Marca una notificación como leída
+  /// Marks the notification identified by [id] as read.
   Future<void> markAsRead(String id) async {
     try {
       final index = _notifications.indexWhere((n) => n.id == id);
@@ -98,12 +101,12 @@ class NotificationProvider extends ChangeNotifier {
         await _saveNotifications();
         notifyListeners();
       }
-    } catch (e) {
-      debugPrint('Error al marcar notificación como leída: $e');
+    } catch (_) {
+      // Persistence errors are non-fatal.
     }
   }
 
-  /// Marca todas las notificaciones como leídas
+  /// Marks all notifications as read.
   Future<void> markAllAsRead() async {
     try {
       bool hasChanges = false;
@@ -118,34 +121,34 @@ class NotificationProvider extends ChangeNotifier {
         await _saveNotifications();
         notifyListeners();
       }
-    } catch (e) {
-      debugPrint('Error al marcar todas las notificaciones como leídas: $e');
+    } catch (_) {
+      // Persistence errors are non-fatal.
     }
   }
 
-  /// Elimina una notificación
+  /// Removes the notification identified by [id].
   Future<void> deleteNotification(String id) async {
     try {
       _notifications.removeWhere((n) => n.id == id);
       await _saveNotifications();
       notifyListeners();
-    } catch (e) {
-      debugPrint('Error al eliminar notificación: $e');
+    } catch (_) {
+      // Persistence errors are non-fatal.
     }
   }
 
-  /// Elimina todas las notificaciones
+  /// Removes all notifications.
   Future<void> clearAll() async {
     try {
       _notifications.clear();
       await _saveNotifications();
       notifyListeners();
-    } catch (e) {
-      debugPrint('Error al limpiar notificaciones: $e');
+    } catch (_) {
+      // Persistence errors are non-fatal.
     }
   }
 
-  /// Guarda las notificaciones en SharedPreferences
+  /// Persists the current notification list to [SharedPreferences].
   Future<void> _saveNotifications() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -153,14 +156,12 @@ class NotificationProvider extends ChangeNotifier {
         _notifications.map((n) => n.toJson()).toList(),
       );
       await prefs.setString(_storageKey, notificationsJson);
-    } catch (e) {
-      debugPrint('Error al guardar notificaciones: $e');
+    } catch (_) {
+      // Persistence errors are non-fatal.
     }
   }
 
-  // ========== MÉTODOS DE UTILIDAD PARA CREAR NOTIFICACIONES ESPECÍFICAS ==========
-
-  /// Crea una notificación de información
+  /// Adds an informational notification.
   Future<void> notifyInfo(String title, String message, {String? actionRoute}) async {
     await addNotification(
       title: title,
@@ -170,7 +171,7 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 
-  /// Crea una notificación de éxito
+  /// Adds a success notification.
   Future<void> notifySuccess(String title, String message, {String? actionRoute}) async {
     await addNotification(
       title: title,
@@ -180,7 +181,7 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 
-  /// Crea una notificación de advertencia
+  /// Adds a warning notification.
   Future<void> notifyWarning(String title, String message, {String? actionRoute}) async {
     await addNotification(
       title: title,
@@ -190,7 +191,7 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 
-  /// Crea una notificación de error
+  /// Adds an error notification.
   Future<void> notifyError(String title, String message) async {
     await addNotification(
       title: title,
@@ -199,7 +200,7 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 
-  /// Crea una notificación del sistema
+  /// Adds a system notification.
   Future<void> notifySystem(String title, String message, {String? actionRoute}) async {
     await addNotification(
       title: title,

@@ -1,8 +1,13 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/dropdown_item_model.dart';
-import '../../data/models/database_metadata_model.dart'; // <--- IMPORTAR METADATA
+import '../../data/models/database_metadata_model.dart';
 import '../../data/repositories/dynamic_crud_repository.dart';
 
+/// State manager for dynamic CRUD operations on a database table.
+///
+/// Maintains paginated record lists, search state, loading flags, and error
+/// messages. Supports both page-based navigation and infinite scroll via
+/// [loadMoreRecords].
 class DynamicCrudProvider extends ChangeNotifier {
   final DynamicCrudRepository repository;
 
@@ -11,16 +16,16 @@ class DynamicCrudProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _records = [];
   Map<String, dynamic>? _currentRecord;
   bool _isLoading = false;
-  bool _isLoadingMore = false; // Para infinite scroll
+  bool _isLoadingMore = false;
   String? _errorMessage;
-  bool _useMock = false; // Use real API by default
+  bool _useMock = false;
 
   // Pagination state
   int _currentPage = 1;
-  int _pageSize = 20; // Cambiado a 20 para infinite scroll
+  int _pageSize = 20;
   int _totalRecords = 0;
   int _totalPages = 0;
-  bool _hasMoreData = true; // Para saber si hay más datos
+  bool _hasMoreData = true;
 
   // Search state
   String _searchTerm = '';
@@ -31,14 +36,12 @@ class DynamicCrudProvider extends ChangeNotifier {
   bool get isLoadingMore => _isLoadingMore;
   String? get errorMessage => _errorMessage;
 
-  // Pagination getters
   int get currentPage => _currentPage;
   int get pageSize => _pageSize;
   int get totalRecords => _totalRecords;
   int get totalPages => _totalPages;
   bool get hasMoreData => _hasMoreData;
 
-  // Search getter
   String get searchTerm => _searchTerm;
 
   void setUseMock(bool value) {
@@ -46,14 +49,14 @@ class DynamicCrudProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Set the page size and reload data
+  /// Updates the page size and resets to the first page.
   void setPageSize(int newPageSize) {
     _pageSize = newPageSize;
-    _currentPage = 1; // Reset to first page when changing page size
+    _currentPage = 1;
     notifyListeners();
   }
 
-  /// Set the current page
+  /// Navigates to a specific [page] if it is within the valid range.
   void setPage(int page) {
     if (page >= 1 && page <= _totalPages) {
       _currentPage = page;
@@ -61,31 +64,28 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
-  /// Set search term
+  /// Updates the active search term and resets to the first page.
   void setSearchTerm(String term) {
     _searchTerm = term;
-    _currentPage = 1; // Reset to first page when searching
+    _currentPage = 1;
     notifyListeners();
   }
 
-  /// Clear search
+  /// Clears the active search term and resets to the first page.
   void clearSearch() {
     _searchTerm = '';
     _currentPage = 1;
     notifyListeners();
   }
 
-  /// Calculate total pages based on total records and page size
   void _updatePagination(int total) {
     _totalRecords = total;
     _totalPages = (_totalRecords / _pageSize).ceil();
     if (_totalPages == 0) _totalPages = 1;
-
-    // Actualizar hasMoreData
     _hasMoreData = _currentPage < _totalPages;
   }
 
-  /// Reset pagination state (call before fresh load)
+  /// Resets pagination state before a fresh data load.
   void resetPagination() {
     _currentPage = 1;
     _records = [];
@@ -94,17 +94,19 @@ class DynamicCrudProvider extends ChangeNotifier {
     _totalPages = 0;
   }
 
-  // --- MÉTODOS CRUD ACTUALIZADOS (V2) ---
-
+  /// Loads a paginated page of records for [tableName].
+  ///
+  /// When [resetData] is `true` (default), existing records are replaced.
+  /// When `false`, new records are appended for infinite scroll.
   Future<void> loadTableRecords({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required String tableName,
     required String token,
     int? page,
     int? pageSize,
     String? searchTerm,
-    bool resetData = true, // Por defecto resetea los datos
+    bool resetData = true,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -115,14 +117,13 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     notifyListeners();
 
-    // Update pagination parameters if provided
     if (page != null) _currentPage = page;
     if (pageSize != null) _pageSize = pageSize;
     if (searchTerm != null) _searchTerm = searchTerm;
 
     try {
       final result = await repository.getTableRecordsPaginated(
-        metadata: metadata, // <--- PASAR METADATA AL REPO
+        metadata: metadata,
         databaseName: databaseName,
         tableName: tableName,
         token: token,
@@ -135,7 +136,6 @@ class DynamicCrudProvider extends ChangeNotifier {
       if (resetData) {
         _records = result['records'] as List<Map<String, dynamic>>;
       } else {
-        // Append para infinite scroll
         _records.addAll(result['records'] as List<Map<String, dynamic>>);
       }
 
@@ -150,25 +150,25 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
-  /// Cargar más registros (infinite scroll)
+  /// Appends the next page of records for infinite scroll.
+  ///
+  /// Does nothing if a load is already in progress or there are no more pages.
   Future<void> loadMoreRecords({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required String tableName,
     required String token,
   }) async {
-    // No cargar si ya estamos cargando o no hay más datos
     if (_isLoadingMore || !_hasMoreData || _isLoading) return;
 
     _isLoadingMore = true;
     notifyListeners();
 
     try {
-      // Incrementar página
       _currentPage++;
 
       final result = await repository.getTableRecordsPaginated(
-        metadata: metadata, // <--- PASAR METADATA
+        metadata: metadata,
         databaseName: databaseName,
         tableName: tableName,
         token: token,
@@ -178,7 +178,6 @@ class DynamicCrudProvider extends ChangeNotifier {
         useMock: _useMock,
       );
 
-      // Agregar nuevos registros al final
       final newRecords = result['records'] as List<Map<String, dynamic>>;
       _records.addAll(newRecords);
 
@@ -189,14 +188,14 @@ class DynamicCrudProvider extends ChangeNotifier {
     } catch (e) {
       _errorMessage = _cleanErrorMessage(e.toString());
       _isLoadingMore = false;
-      _currentPage--; // Revertir el incremento en caso de error
+      _currentPage--;
       notifyListeners();
     }
   }
 
-  /// Load all records without pagination (for backwards compatibility)
+  /// Loads all records for [tableName] without pagination.
   Future<void> loadAllTableRecords({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required String tableName,
     required String token,
@@ -207,7 +206,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       _records = await repository.getTableRecords(
-        metadata: metadata, // <--- PASAR METADATA
+        metadata: metadata,
         databaseName: databaseName,
         tableName: tableName,
         token: token,
@@ -223,8 +222,9 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
+  /// Fetches a single record by [id] and stores it in [currentRecord].
   Future<void> loadTableRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -236,15 +236,12 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       _currentRecord = await repository.getTableRecord(
-        metadata: metadata, // <--- PASAR METADATA
+        metadata: metadata,
         databaseName: databaseName,
         tableName: tableName,
         id: id,
         token: token,
       );
-      print('📝 Registro cargado para editar ($tableName #$id):');
-      print('   Keys: ${_currentRecord?.keys.toList()}');
-      print('   Data: $_currentRecord');
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -254,8 +251,9 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
+  /// Creates a new record in [tableName]. Returns `true` on success.
   Future<bool> createRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required String tableName,
     required Map<String, dynamic> data,
@@ -267,7 +265,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       await repository.createTableRecord(
-        metadata: metadata, // <--- PASAR METADATA
+        metadata: metadata,
         databaseName: databaseName,
         tableName: tableName,
         data: data,
@@ -284,8 +282,9 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
+  /// Updates the record identified by [id] in [tableName]. Returns `true` on success.
   Future<bool> updateRecord({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -298,7 +297,7 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       await repository.updateTableRecord(
-        metadata: metadata, // <--- PASAR METADATA
+        metadata: metadata,
         databaseName: databaseName,
         tableName: tableName,
         id: id,
@@ -316,12 +315,8 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
-  // DELETE y DROPDOWN siguen igual (V1 Legacy)
-  // Pero agregamos metadata a la firma de deleteRecord por consistencia si quieres, 
-  // aunque el repo lo ignore en delete.
-  
+  /// Deletes the record identified by [id] from [tableName]. Returns `true` on success.
   Future<bool> deleteRecord({
-    // required DatabaseMetadataModel metadata, // Opcional aquí
     required String databaseName,
     required String tableName,
     required dynamic id,
@@ -333,12 +328,19 @@ class DynamicCrudProvider extends ChangeNotifier {
 
     try {
       final result = await repository.deleteTableRecord(
-        // metadata: metadata, // Si decides pasarlo
         databaseName: databaseName,
         tableName: tableName,
         id: id,
         token: token,
-        metadata: DatabaseMetadataModel(databaseName: databaseName, tables: [], columns: [], pkInfo: [], fkInfo: [], indexes: [], views: []), // Dummy metadata para cumplir con repo si es necesario
+        metadata: DatabaseMetadataModel(
+          databaseName: databaseName,
+          tables: [],
+          columns: [],
+          pkInfo: [],
+          fkInfo: [],
+          indexes: [],
+          views: [],
+        ),
       );
       _isLoading = false;
       notifyListeners();
@@ -351,6 +353,7 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
+  /// Returns the dropdown items for a foreign key field pointing to [tableName].
   Future<List<DropdownItemModel>> getDropdownData({
     required String databaseName,
     required String tableName,
@@ -370,7 +373,7 @@ class DynamicCrudProvider extends ChangeNotifier {
     }
   }
 
-  // Utils
+  /// Clears the current record list and resets state.
   void clearRecords() {
     _records = [];
     _currentRecord = null;
@@ -378,6 +381,7 @@ class DynamicCrudProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears the current error message.
   void clearError() {
     _errorMessage = null;
     notifyListeners();

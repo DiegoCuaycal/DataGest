@@ -10,9 +10,8 @@ class ColumnNameMapper {
   ///   }
   /// }
   static const Map<String, Map<String, String>> _columnMapping = {
-    // ========== EDUCACIÓN ==========
     'estudiantes': {
-      'legajo': 'cedula', // BD usa 'legajo', backend usa 'Cedula'
+      'legajo': 'cedula',
       'usuario_id': 'usuarioId',
       'fecha_nacimiento': 'fechaNacimiento',
       'created_at': 'createdAt',
@@ -29,7 +28,6 @@ class ColumnNameMapper {
       'fecha_inscripcion': 'fechaInscripcion',
     },
 
-    // ========== PRODUCTOS ==========
     'categorias': {
       'padre_id': 'padreId',
     },
@@ -47,7 +45,6 @@ class ColumnNameMapper {
       'ubicacion_almacen': 'ubicacionAlmacen',
     },
 
-    // ========== SALUD ==========
     'pacientes': {
       'numero_historia': 'numeroHistoria',
       'fecha_nacimiento': 'fechaNacimiento',

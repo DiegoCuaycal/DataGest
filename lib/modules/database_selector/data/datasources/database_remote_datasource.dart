@@ -20,15 +20,13 @@ class DatabaseRemoteDataSource {
       );
 
       if (response.statusCode == 200) {
-        // La API devuelve un array de strings: ["Estudiantes", "Médicos", "Productos"]
         final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
 
-        // Convertir cada string a un DatabaseInfoModel
         return data.asMap().entries.map((entry) {
           return DatabaseInfoModel(
-            id: entry.key + 1, // Generar ID basado en el índice
+            id: entry.key + 1,
             name: entry.value as String,
-            description: 'Base de datos ${entry.value}', // Descripción generada
+            description: 'Base de datos ${entry.value}',
           );
         }).toList();
       } else {
@@ -39,14 +37,9 @@ class DatabaseRemoteDataSource {
     }
   }
 
-  /// Mock data for testing without backend (SOLO PARA DEBUG)
-  /// NOTA: Este método solo se usa si falla la conexión con el API
+  /// Returns an empty list; reserved as a local fallback when the backend is unavailable.
   Future<List<DatabaseInfoModel>> getMockDatabases() async {
-    // Simular delay de red
     await Future.delayed(const Duration(seconds: 1));
-
-    // IMPORTANTE: Esta lista es solo para desarrollo/debug
-    // En producción, SIEMPRE se debe usar getAvailableDatabases()
     return [];
   }
 }

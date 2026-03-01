@@ -391,7 +391,6 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                 icon: Icons.receipt_long,
                 color: AppColors.secondary,
                 onTap: () {
-                  // TODO: Implementar navegación a CRUD Cabecera-Detalle
                   NotificationService.showInfo(
                     context,
                     'CRUD Cabecera-Detalle - Próximamente',

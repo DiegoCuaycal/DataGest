@@ -73,22 +73,6 @@ class HomeDrawer extends StatelessWidget {
                     Navigator.pop(context);
                   },
                 ),
-                // TODO: Descomentar cuando el backend implemente la funcionalidad de Herramientas CASE
-                // La implementación frontend ya está lista en:
-                // - lib/modules/case_tools/presentation/screens/tools_list_screen.dart
-                // - lib/modules/case_tools/data/repositories/tool_repository.dart
-                // Solo falta que el backend tenga los endpoints /tools listos
-                /*
-                _buildDrawerItem(
-                  context,
-                  icon: AppIcons.tool,
-                  title: AppStrings.tools,
-                  onTap: () {
-                    Navigator.pop(context);
-                    AppRoutes.navigateTo(context, AppRoutes.toolsList);
-                  },
-                ),
-                */
                 _buildDrawerItem(
                   context,
                   icon: AppIcons.category,

@@ -455,10 +455,6 @@ class DynamicRemoteDataSource {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Mock data helpers (used for offline testing and UI development)
-  // ---------------------------------------------------------------------------
-
   Future<DatabaseMetadataModel> getMockMetadata() async {
     await Future.delayed(const Duration(seconds: 1));
 

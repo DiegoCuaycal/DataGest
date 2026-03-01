@@ -14,7 +14,8 @@ import 'package:herramienta_case/modules/export/presentation/providers/export_pr
 import 'package:herramienta_case/modules/export/presentation/widgets/export_format_card.dart';
 import 'package:herramienta_case/modules/export/presentation/widgets/table_selection_list.dart';
 
-/// Pantalla para seleccionar opciones de exportación
+/// Screen that lets the user choose export format, options, and table selection
+/// before triggering a data export.
 class ExportOptionsScreen extends StatefulWidget {
   const ExportOptionsScreen({super.key});
 
@@ -96,7 +97,6 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Selección de formato
           Text(
             'Formato de exportación',
             style: AppStyles.heading3,
@@ -106,7 +106,6 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
 
           const SizedBox(height: AppStyles.paddingLarge),
 
-          // Opciones adicionales
           Text(
             'Opciones',
             style: AppStyles.heading3,
@@ -116,7 +115,6 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
 
           const SizedBox(height: AppStyles.paddingLarge),
 
-          // Selección de tablas
           Text(
             'Tablas a exportar',
             style: AppStyles.heading3,
@@ -278,11 +276,11 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
     final authProvider = context.read<AuthProvider>();
     final dbProvider = context.read<DatabaseSelectorProvider>();
     final exportProvider = context.read<ExportProvider>();
-    final metadataProvider = context.read<MetadataProvider>(); // <--- 1. OBTENER PROVIDER DE METADATA
+    final metadataProvider = context.read<MetadataProvider>();
 
     final token = authProvider.currentUser?.token ?? '';
     final databaseName = dbProvider.currentDatabaseName ?? '';
-    final metadata = metadataProvider.metadata; // <--- 2. OBTENER METADATA
+    final metadata = metadataProvider.metadata;
 
     if (token.isEmpty || databaseName.isEmpty || metadata == null) {
       if (context.mounted) {
@@ -294,37 +292,32 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
       return;
     }
 
-    // Crear configuración de exportación
     final config = ExportConfig(
       format: _selectedFormat,
       includeHeaders: _includeHeaders,
     );
 
-    // Obtener las tablas a exportar
     final tablesToExport = _exportAll
         ? allTables
         : allTables.where((t) => _selectedTables.contains(t.table)).toList();
 
-    // Mostrar loading overlay durante la exportación
     LoadingOverlayService.show(
       context,
       text: 'Exportando ${tablesToExport.length} tabla${tablesToExport.length > 1 ? 's' : ''}...',
     );
 
     try {
-      // Exportar
       final results = await exportProvider.exportMultipleTables(
-        metadata: metadata, // <--- 3. PASAR METADATA (CORRECCIÓN)
+        metadata: metadata,
         databaseName: databaseName,
         tables: tablesToExport,
         baseConfig: config,
         token: token,
-        useMockData: false, // Puedes poner true si quieres probar sin backend V2
+        useMockData: false,
       );
 
       if (!context.mounted) return;
 
-      // Ocultar loading
       LoadingOverlayService.hide();
 
       if (results != null && results.isNotEmpty) {
@@ -340,8 +333,7 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
           '($totalRecords registros)',
         );
 
-        // Mostrar diálogo con ubicación de archivos
-        _showExportSuccessDialog(context, results);
+          _showExportSuccessDialog(context, results);
       } else if (exportProvider.errorMessage != null) {
         NotificationService.showError(
           context,
@@ -349,7 +341,6 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
         );
       }
     } catch (e) {
-      // Ocultar loading en caso de error
       LoadingOverlayService.hide();
       if (context.mounted) {
         NotificationService.showError(
@@ -364,7 +355,6 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
     BuildContext context,
     List results,
   ) async {
-    // Obtener la ubicación de los archivos
     final exportProvider = context.read<ExportProvider>();
     final exportPath = await exportProvider.getExportsDirectory();
 
@@ -385,7 +375,6 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Resumen
               Text(
                 'Se han exportado ${results.length} archivo${results.length > 1 ? 's' : ''}:',
                 style: AppStyles.bodyMedium.copyWith(
@@ -394,7 +383,6 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
               ),
               const SizedBox(height: AppStyles.paddingMedium),
 
-              // Lista de archivos
               Container(
                 constraints: const BoxConstraints(maxHeight: 200),
                 decoration: BoxDecoration(
@@ -436,7 +424,6 @@ class _ExportOptionsScreenState extends State<ExportOptionsScreen> {
 
               const SizedBox(height: AppStyles.paddingMedium),
 
-              // Ubicación de archivos
               Container(
                 padding: const EdgeInsets.all(AppStyles.paddingMedium),
                 decoration: BoxDecoration(

@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:herramienta_case/modules/dynamic_crud/data/models/table_info_model.dart';
-// 1. IMPORTAR EL MODELO DE METADATA
-import 'package:herramienta_case/modules/dynamic_crud/data/models/database_metadata_model.dart'; 
+import 'package:herramienta_case/modules/dynamic_crud/data/models/database_metadata_model.dart';
 import 'package:herramienta_case/modules/export/data/repositories/export_repository.dart';
 import 'package:herramienta_case/modules/export/domain/models/export_config.dart';
 import 'package:herramienta_case/modules/export/domain/models/export_result.dart';
 
+/// ChangeNotifier that manages the state of the export feature.
+///
+/// Delegates to [ExportRepository] for all I/O operations and exposes
+/// progress, status, and error information to the presentation layer.
 class ExportProvider extends ChangeNotifier {
   final ExportRepository repository;
 
@@ -29,9 +32,10 @@ class ExportProvider extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  // --- MÉTODO 1: EXPORTAR UNA TABLA ---
+  /// Exports a single [tableName] using [config] and returns the result,
+  /// or `null` on failure.
   Future<ExportResult?> exportTable({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required String tableName,
     required ExportConfig config,
@@ -42,7 +46,7 @@ class ExportProvider extends ChangeNotifier {
       _clearError();
 
       final result = await repository.exportTable(
-        metadata: metadata, // <--- PASAR METADATA
+        metadata: metadata,
         databaseName: databaseName,
         tableName: tableName,
         config: config,
@@ -59,9 +63,10 @@ class ExportProvider extends ChangeNotifier {
     }
   }
 
-  // --- MÉTODO 2: EXPORTAR MÚLTIPLES TABLAS ---
+  /// Exports each table in [tables] and returns all successful results,
+  /// or `null` if the entire operation fails.
   Future<List<ExportResult>?> exportMultipleTables({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required List<TableInfoModel> tables,
     required ExportConfig baseConfig,
@@ -74,7 +79,7 @@ class ExportProvider extends ChangeNotifier {
       _progress = 0.0;
 
       final results = await repository.exportMultipleTables(
-        metadata: metadata, // <--- PASAR METADATA
+        metadata: metadata,
         databaseName: databaseName,
         tables: tables,
         baseConfig: baseConfig,
@@ -92,16 +97,18 @@ class ExportProvider extends ChangeNotifier {
     }
   }
 
-  // --- MÉTODO 3: EXPORTAR TODO ---
+  /// Exports every table in [allTables].
+  ///
+  /// Delegates to [exportMultipleTables].
   Future<List<ExportResult>?> exportAllTables({
-    required DatabaseMetadataModel metadata, // <--- NUEVO REQUERIDO
+    required DatabaseMetadataModel metadata,
     required String databaseName,
     required List<TableInfoModel> allTables,
     required ExportConfig config,
     required String token,
   }) async {
     return await exportMultipleTables(
-      metadata: metadata, // <--- PASAR METADATA
+      metadata: metadata,
       databaseName: databaseName,
       tables: allTables,
       baseConfig: config,

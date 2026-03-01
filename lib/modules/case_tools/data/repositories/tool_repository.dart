@@ -1,16 +1,12 @@
 import 'package:herramienta_case/modules/case_tools/data/models/tool_model.dart';
 import 'package:herramienta_case/modules/case_tools/domain/entities/tool_entity.dart';
 
-/// Repositorio de herramientas CASE
+/// Repository that provides CASE tool data.
 class ToolRepository {
-  // TODO: Implementar data source cuando el backend esté listo
-
-  /// Obtiene todas las herramientas (mock)
+  /// Returns all available CASE tools.
   Future<List<ToolEntity>> getAllTools() async {
-    // Simular delay de red
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // Datos mock para pruebas
     final mockTools = [
       ToolModel(
         id: 1,

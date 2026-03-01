@@ -60,20 +60,19 @@ class RecentActivityProvider extends ChangeNotifier {
             .toList();
         notifyListeners();
       }
-    } catch (e) {
-      debugPrint('Error loading activities: $e');
+    } catch (_) {
       _activities = [];
     }
   }
 
-  /// Guarda actividades en SharedPreferences
+  /// Persists the current activity list to [SharedPreferences].
   Future<void> _saveActivities() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = _activities.map((a) => a.toJson()).toList();
       await prefs.setString(_storageKey, json.encode(jsonList));
-    } catch (e) {
-      debugPrint('Error saving activities: $e');
+    } catch (_) {
+      // Persistence errors are non-fatal.
     }
   }
 }

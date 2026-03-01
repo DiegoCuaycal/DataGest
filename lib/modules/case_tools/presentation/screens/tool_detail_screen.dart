@@ -150,7 +150,6 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
                                       context,
                                       'Abriendo ${_tool!.url}',
                                     );
-                                    // TODO: Abrir URL en navegador
                                   },
                                   child: Text(
                                     _tool!.url!,

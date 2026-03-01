@@ -87,7 +87,6 @@ class NotificationsScreen extends StatelessWidget {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
-                    // Simular refresh
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
                   child: ListView.separated(

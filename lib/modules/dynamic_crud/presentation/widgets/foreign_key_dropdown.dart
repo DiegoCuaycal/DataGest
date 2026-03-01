@@ -43,10 +43,6 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
   void initState() {
     super.initState();
     _selectedValue = widget.initialValue;
-    print('🎬 ForeignKeyDropdown INIT ${widget.label}:');
-    print('   📥 initialValue = $_selectedValue');
-    print('   📦 Type = ${_selectedValue?.runtimeType}');
-    print('   📋 Table = ${widget.referenceTable}');
     _loadDropdownData();
   }
 
@@ -71,35 +67,20 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
       final authProvider = context.read<AuthProvider>();
       final token = authProvider.currentUser?.token ?? '';
 
-      print('📋 Cargando dropdown para ${widget.referenceTable}');
-      
-      // --- 🚨 PARCHE DE COLUMNAS (SOLUCIÓN 1) 🚨 ---
       List<String> displayColumns;
 
-      // 1. Si la tabla es CITAS
       if (widget.referenceTable.toLowerCase() == 'citas') {
-        print('🚑 Aplicando parche de columnas para Citas');
         displayColumns = ['fecha_hora', 'motivo_consulta'];
-      } 
-      // 2. Si la tabla es DIAGNOSTICOS
-      else if (widget.referenceTable.toLowerCase() == 'diagnosticos') {
-         displayColumns = ['descripcion_diagnostico', 'tratamiento_recetado'];
-      }
-      // 3. 🚨 NUEVO: Si la tabla es MEDICOS (Para que se vea bonito)
-      else if (widget.referenceTable.toLowerCase() == 'medicos') {
-         print('🚑 Aplicando parche de columnas para Medicos');
-         displayColumns = ['nombres', 'especialidad', 'consultorio'];
-      }
-      // 4. Configuración normal
-      else {
+      } else if (widget.referenceTable.toLowerCase() == 'diagnosticos') {
+        displayColumns = ['descripcion_diagnostico', 'tratamiento_recetado'];
+      } else if (widget.referenceTable.toLowerCase() == 'medicos') {
+        displayColumns = ['nombres', 'especialidad', 'consultorio'];
+      } else {
         displayColumns = ForeignKeyConfig.getDisplayColumns(
-          tableName: widget.referenceTable, 
+          tableName: widget.referenceTable,
           columnName: widget.referenceColumn,
         );
       }
-      // -----------------------------------------------
-
-      print('🎨 Columnas para mostrar: $displayColumns');
 
       final items = await provider.getDropdownData(
         databaseName: widget.databaseName,
@@ -113,38 +94,20 @@ class _ForeignKeyDropdownState extends State<ForeignKeyDropdown> {
           _items = items;
           _isLoading = false;
 
-          print('📊 Items cargados: ${items.length}');
-          if (items.isNotEmpty) {
-            print('   Primer item: id=${items.first.id}, display=${items.first.displayValue}');
-          }
-
-          // Normalizar el valor seleccionado
           if (_selectedValue != null) {
-            print('🔍 Normalizando valor seleccionado: $_selectedValue (${_selectedValue.runtimeType})');
-
             if (_selectedValue is String) {
               _selectedValue = int.tryParse(_selectedValue) ?? _selectedValue;
-              print('   Convertido a: $_selectedValue (${_selectedValue.runtimeType})');
             }
 
-            final valueExists = _items.any((item) {
-              print('   Comparando: item.id=${item.id} (${item.id.runtimeType}) con _selectedValue=$_selectedValue (${_selectedValue.runtimeType})');
-              return item.id == _selectedValue;
-            });
+            final valueExists = _items.any((item) => item.id == _selectedValue);
 
             if (!valueExists) {
-              print('⚠️ Valor inicial $_selectedValue NO encontrado en items');
-              print('   IDs disponibles: ${_items.map((e) => e.id).toList()}');
-            } else {
-              print('✅ Valor inicial $_selectedValue SÍ encontrado');
+              _selectedValue = null;
             }
-          } else {
-            print('⚠️ No hay valor inicial seleccionado');
           }
         });
       }
     } catch (e) {
-      print('❌ Error cargando dropdown: $e');
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();

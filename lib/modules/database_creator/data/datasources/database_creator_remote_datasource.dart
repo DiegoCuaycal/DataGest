@@ -3,43 +3,34 @@ import 'package:http/http.dart' as http;
 import '../../../../core/network/api_endpoints.dart';
 import '../../domain/models/database_schema.dart';
 
-/// Datasource para manejar la comunicación con el backend para crear bases de datos
+/// Remote data source for database-creation operations.
+///
+/// Communicates directly with the `/api/Auth/crear-modulo` endpoint using
+/// a plain [http.Client] (no auth token required at this stage).
 class DatabaseCreatorRemoteDataSource {
   final http.Client client;
 
   DatabaseCreatorRemoteDataSource({required this.client});
 
-  /// Envía el esquema de la base de datos al backend usando /api/Auth/crear-modulo
+  /// Sends [schema] to the backend to provision a new SQL Server database.
+  ///
+  /// The endpoint expects two fields:
+  /// - `nombreDb`: the database name
+  /// - `jsonTablas`: the table definitions serialised as a JSON string
+  ///
+  /// Throws an [Exception] on validation errors (400), name conflicts (409),
+  /// or any other non-2xx response.
   Future<void> createDatabase(DatabaseSchema schema) async {
     try {
-      // El backend espera dos campos:
-      // - nombreDb: nombre de la base de datos
-      // - jsonTablas: JSON string con las tablas
       final tablesJson = schema.toJson();
-
-      // Convertir el array de tablas a string JSON
       final tablesJsonString = jsonEncode(tablesJson);
 
-      // Crear el objeto que espera el backend
       final requestBody = {
         'nombreDb': schema.name,
         'jsonTablas': tablesJsonString,
       };
 
-      // Debug: Imprimir lo que se está enviando
-      print('\n=== CREANDO BASE DE DATOS ===');
-      print('Nombre de BD: ${schema.name}');
-      print('Número de tablas: ${schema.tables.length}');
-      print('\n--- JSON TABLAS ---');
-      print(tablesJsonString);
-      print('\n--- REQUEST BODY COMPLETO ---');
-      print(jsonEncode(requestBody));
-      print('--- FIN ---\n');
-
-      // Endpoint del backend para crear módulo/base de datos
       final url = '${ApiEndpoints.baseUrl}/api/Auth/crear-modulo';
-
-      print('📤 Enviando a: $url');
 
       final response = await client.post(
         Uri.parse(url),
@@ -50,14 +41,9 @@ class DatabaseCreatorRemoteDataSource {
         body: jsonEncode(requestBody),
       );
 
-      print('📥 Response Status: ${response.statusCode}');
-      print('📥 Response Body: ${response.body}\n');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ Base de datos "${schema.name}" creada exitosamente en el backend\n');
         return;
       } else if (response.statusCode == 400) {
-        // Error de validación del backend
         try {
           final errorData = jsonDecode(response.body);
           final errorMessage = errorData['message'] ??
@@ -68,7 +54,6 @@ class DatabaseCreatorRemoteDataSource {
           throw Exception('Error de validación: ${response.body}');
         }
       } else if (response.statusCode == 409) {
-        // Conflicto - la base de datos ya existe
         throw Exception('Ya existe una base de datos con ese nombre');
       } else {
         throw Exception(
@@ -76,7 +61,6 @@ class DatabaseCreatorRemoteDataSource {
         );
       }
     } catch (e) {
-      print('❌ Error: $e\n');
       if (e is Exception) {
         rethrow;
       }
@@ -84,7 +68,10 @@ class DatabaseCreatorRemoteDataSource {
     }
   }
 
-  /// Valida el esquema en el backend sin crearlo
+  /// Validates [schema] against the backend without creating anything.
+  ///
+  /// Returns the server's validation response on success, or throws an
+  /// [Exception] if the request fails.
   Future<Map<String, dynamic>> validateSchema(DatabaseSchema schema) async {
     try {
       final jsonData = schema.toJson();

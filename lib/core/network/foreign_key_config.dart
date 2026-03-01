@@ -14,7 +14,6 @@ class ForeignKeyConfig {
   ///   }
   /// }
   static const Map<String, Map<String, Map<String, dynamic>>> _fkConfig = {
-    // ========== BASE DE DATOS: EDUCACIÓN ==========
     'Cursos': {
       'Profesor_Id': {
         'referenceTable': 'Profesores',
@@ -35,7 +34,6 @@ class ForeignKeyConfig {
       },
     },
 
-    // ========== BASE DE DATOS: PRODUCTOS ==========
     'Categorias': {
       'Padre_Id': {
         'referenceTable': 'Categorias',
@@ -63,7 +61,6 @@ class ForeignKeyConfig {
       },
     },
 
-    // ========== BASE DE DATOS: SALUD ==========
     'Citas': {
       'Paciente_Id': {
         'referenceTable': 'Pacientes',
