@@ -1,6 +1,16 @@
-/// Mapper que traduce nombres de tablas y bases de datos a los endpoints específicos del backend
+/// Maps database names and table names to the corresponding REST API endpoints
+/// defined in the backend.
+///
+/// The backend organizes resources by domain (`educacion`, `salud`, `productos`),
+/// and each domain has its own set of endpoints. This mapper centralizes that
+/// routing logic so the rest of the application remains decoupled from specific
+/// URL patterns.
 class EndpointMapper {
-  /// Obtiene el prefijo de API según la base de datos
+  /// Resolves the API domain prefix for a given [databaseName].
+  ///
+  /// Returns `'educacion'`, `'salud'`, or `'productos'` based on keywords
+  /// found in [databaseName]. Falls back to the lowercased database name
+  /// if no known domain keyword is matched.
   static String _getApiPrefix(String databaseName) {
     final dbLower = databaseName.toLowerCase();
 
@@ -12,11 +22,13 @@ class EndpointMapper {
       return 'salud';
     }
 
-    // Fallback: usar el nombre de la base de datos
     return databaseName.toLowerCase();
   }
 
-  /// Mapea el endpoint correcto para listar registros de una tabla
+  /// Returns the GET (list) endpoint for [tableName] in [databaseName].
+  ///
+  /// Applies explicit table-to-endpoint mappings for each supported domain.
+  /// Falls back to the pattern `/api/{domain}/{table}` for unmapped tables.
   static String getListEndpoint({
     required String databaseName,
     required String tableName,
@@ -24,10 +36,6 @@ class EndpointMapper {
     final apiPrefix = _getApiPrefix(databaseName);
     final tableLower = tableName.toLowerCase();
 
-    // ========== MAPEO DE ENDPOINTS SEGÚN EL BACKEND ==========
-    // Basado en la estructura real del backend en BackFabrica
-
-    // ENDPOINTS DE EDUCACIÓN
     if (apiPrefix == 'educacion') {
       switch (tableLower) {
         case 'estudiantes':
@@ -37,16 +45,14 @@ class EndpointMapper {
         case 'cursos':
           return '/api/educacion/cursos';
         case 'inscripciones':
-          // IMPORTANTE: El backend solo tiene POST /api/educacion/inscribir
-          // Para GET, intentar con endpoint estándar (puede no existir)
+          // The backend only exposes POST /api/educacion/inscribir for writes;
+          // the GET endpoint follows the standard pattern.
           return '/api/educacion/inscripciones';
         case 'usuarios':
-          // Los usuarios están integrados en Estudiantes/Profesores
           return '/api/usuarios';
       }
     }
 
-    // ENDPOINTS DE SALUD
     if (apiPrefix == 'salud') {
       switch (tableLower) {
         case 'pacientes':
@@ -60,12 +66,10 @@ class EndpointMapper {
         case 'diagnósticos':
           return '/api/salud/diagnosticos';
         case 'usuarios':
-          // Los usuarios están integrados en Médicos
           return '/api/usuarios';
       }
     }
 
-    // ENDPOINTS DE PRODUCTOS
     if (apiPrefix == 'productos') {
       switch (tableLower) {
         case 'productos':
@@ -81,17 +85,14 @@ class EndpointMapper {
       }
     }
 
-    // CASO ESPECIAL: tabla "usuarios" sin prefijo específico
     if (tableLower == 'usuarios') {
-      // Los usuarios son parte de otras entidades (Estudiantes, Profesores, Médicos)
       return '/api/usuarios';
     }
 
-    // PATRÓN GENERAL (fallback): /api/{apiPrefix}/{tabla}
     return '/api/$apiPrefix/$tableLower';
   }
 
-  /// Mapea el endpoint para obtener un registro específico por ID
+  /// Returns the endpoint for fetching a single record by [id].
   static String getByIdEndpoint({
     required String databaseName,
     required String tableName,
@@ -104,7 +105,10 @@ class EndpointMapper {
     return '$baseEndpoint/$id';
   }
 
-  /// Mapea el endpoint para crear un nuevo registro
+  /// Returns the POST endpoint for creating a new record in [tableName].
+  ///
+  /// Uses a dedicated endpoint for the `inscripciones` table in the education
+  /// domain; all other tables reuse the list endpoint.
   static String getCreateEndpoint({
     required String databaseName,
     required String tableName,
@@ -112,23 +116,19 @@ class EndpointMapper {
     final apiPrefix = _getApiPrefix(databaseName);
     final tableLower = tableName.toLowerCase();
 
-    // Casos especiales para CREATE (POST)
     if (apiPrefix == 'educacion' && tableLower == 'inscripciones') {
-      // Inscripciones usa un endpoint especial para POST
       return '/api/educacion/inscribir';
     }
 
-    // Para POST, usar el mismo endpoint que el listado
     return getListEndpoint(databaseName: databaseName, tableName: tableName);
   }
 
-  /// Mapea el endpoint para actualizar un registro
+  /// Returns the PUT endpoint for updating a record identified by [id].
   static String getUpdateEndpoint({
     required String databaseName,
     required String tableName,
     required dynamic id,
   }) {
-    // Usar el mismo patrón que getByIdEndpoint
     return getByIdEndpoint(
       databaseName: databaseName,
       tableName: tableName,
@@ -136,13 +136,12 @@ class EndpointMapper {
     );
   }
 
-  /// Mapea el endpoint para eliminar un registro
+  /// Returns the DELETE endpoint for removing a record identified by [id].
   static String getDeleteEndpoint({
     required String databaseName,
     required String tableName,
     required dynamic id,
   }) {
-    // Usar el mismo patrón que getByIdEndpoint
     return getByIdEndpoint(
       databaseName: databaseName,
       tableName: tableName,
@@ -150,34 +149,35 @@ class EndpointMapper {
     );
   }
 
-  /// Mapea el endpoint para obtener opciones de dropdown (foreign keys)
+  /// Returns the endpoint used to populate a foreign key dropdown for [tableName].
+  ///
+  /// Delegates to [getListEndpoint] since dropdowns are populated from the
+  /// full record list, with display value extraction handled client-side.
   static String getDropdownEndpoint({
     required String databaseName,
     required String tableName,
   }) {
-    // Para dropdowns, usar el mismo endpoint que para listar la tabla
-    // El backend devuelve todos los registros y el frontend filtra lo necesario
     return getListEndpoint(
       databaseName: databaseName,
       tableName: tableName,
     );
   }
 
-  /// Verifica si una tabla tiene soporte completo de CRUD en el backend
-  /// Ahora simplificado: si podemos determinar un prefijo de API válido,
-  /// asumimos que la tabla tiene soporte CRUD siguiendo el patrón del backend
+  /// Returns `true` if a valid API prefix can be resolved for [databaseName],
+  /// indicating that CRUD operations are supported for that database.
   static bool isCrudSupported({
     required String databaseName,
     required String tableName,
   }) {
-    // Si podemos obtener un prefijo de API válido, la tabla es soportada
     final apiPrefix = _getApiPrefix(databaseName);
-
-    // Verificar que tengamos un prefijo válido (no vacío)
     return apiPrefix.isNotEmpty && tableName.isNotEmpty;
   }
 
-  /// Obtiene el nombre del header X-DbName que espera el backend
+  /// Returns the value for the `X-DbName` header expected by the backend for
+  /// a given [databaseName].
+  ///
+  /// The backend uses this header to route the request to the correct SQL
+  /// Server database instance.
   static String getDatabaseHeaderValue(String databaseName) {
     final dbLower = databaseName.toLowerCase();
 
@@ -189,7 +189,6 @@ class EndpointMapper {
       return 'Medicos';
     }
 
-    // Fallback: usar el nombre original
     return databaseName;
   }
 }

@@ -1,24 +1,41 @@
 import 'dart:convert';
 
+/// Service that parses raw SQL DDL scripts and converts them into the
+/// JSON schema format expected by the backend API.
+///
+/// Supports standard SQL dialects: T-SQL (SQL Server), MySQL, and PostgreSQL.
+/// Handles `CREATE TABLE` statements, inline `PRIMARY KEY` constraints, and
+/// `CONSTRAINT ... PRIMARY KEY` blocks. Output keys use PascalCase to match
+/// the C# backend's JSON property naming convention.
 class SqlParserService {
-  
+
+  /// Parses a SQL DDL [fileContent] and returns a schema map for [dbName].
+  ///
+  /// The parsing pipeline:
+  /// 1. Strips comments, `INSERT`, `USE`, `GO`, and `SET` statements.
+  /// 2. Extracts each `CREATE TABLE` block via regex.
+  /// 3. Splits column definitions while respecting nested parentheses.
+  /// 4. Normalizes SQL types to the subset understood by the backend.
+  /// 5. Detects identity/auto-increment columns and primary keys.
+  ///
+  /// Throws an [Exception] if no valid `CREATE TABLE` statements are found.
   static Map<String, dynamic> parseSqlToSchemaMap(String fileContent, String dbName) {
-    
+
     final tablesList = <Map<String, dynamic>>[];
     final columnsList = <Map<String, dynamic>>[];
     final pkInfoList = <Map<String, dynamic>>[];
 
-    // 1. LIMPIEZA
+    // Strip block comments, line comments, and non-DDL statements
     String cleanContent = fileContent.replaceAll('\r\n', '\n');
-    cleanContent = cleanContent.replaceAll(RegExp(r'/\*[\s\S]*?\*/'), ''); 
-    cleanContent = cleanContent.replaceAll(RegExp(r'--.*'), ''); 
+    cleanContent = cleanContent.replaceAll(RegExp(r'/\*[\s\S]*?\*/'), '');
+    cleanContent = cleanContent.replaceAll(RegExp(r'--.*'), '');
     cleanContent = cleanContent.replaceAll(RegExp(r'^\s*INSERT\s+INTO.*$', multiLine: true, caseSensitive: false), '');
     cleanContent = cleanContent.replaceAll(RegExp(r'^\s*USE\s+.*$', multiLine: true, caseSensitive: false), '');
     cleanContent = cleanContent.replaceAll(RegExp(r'^\s*GO\s*$', multiLine: true, caseSensitive: false), '');
     cleanContent = cleanContent.replaceAll(RegExp(r'^\s*SET\s+.*$', multiLine: true, caseSensitive: false), '');
     cleanContent = cleanContent.replaceAll('[', '').replaceAll(']', '').replaceAll('"', '').replaceAll("'", "");
 
-    // 2. DETECCIÓN DE TABLAS
+    // Match each CREATE TABLE block
     final tableRegex = RegExp(r'CREATE\s+TABLE\s+(?:(\w+)\.)?(\w+)\s*\(([\s\S]+?)\);', caseSensitive: false, multiLine: true);
     final matches = tableRegex.allMatches(cleanContent);
 
@@ -32,87 +49,88 @@ class SqlParserService {
       String tableName = match.group(2) ?? 'SinNombre';
       String rawColumns = match.group(3) ?? '';
 
-      // --- CAMBIO CLAVE 1: Mayúsculas (PascalCase) para coincidir con C# ---
+      // PascalCase keys match the C# [JsonPropertyName] contract
       tablesList.add({
-        "Schema": schema, // Antes "schema"
-        "Table": tableName // Antes "table"
+        "Schema": schema,
+        "Table": tableName,
       });
 
-      // 3. DETECCIÓN DE COLUMNAS
+      // Split column definitions, preserving nested parentheses in type declarations
       List<String> lines = _splitColumnsRespectingParentheses(rawColumns);
 
       for (var line in lines) {
         line = line.trim();
         if (line.isEmpty) continue;
 
+        // Handle CONSTRAINT ... PRIMARY KEY and standalone PRIMARY KEY blocks
         if (line.toUpperCase().startsWith('CONSTRAINT') || (line.toUpperCase().startsWith('PRIMARY KEY') && line.contains('('))) {
-             if (line.toUpperCase().contains('PRIMARY KEY')) {
-                final pkMatch = RegExp(r'\(([^)]+)\)').firstMatch(line);
-                if (pkMatch != null) {
-                    String pkCol = pkMatch.group(1)!.split(',')[0].trim(); 
-                    // --- CAMBIO CLAVE 2 ---
-                    pkInfoList.add({
-                        "Table": tableName, // Mayúscula
-                        "Column": pkCol     // Mayúscula
-                    });
-                }
+          if (line.toUpperCase().contains('PRIMARY KEY')) {
+            final pkMatch = RegExp(r'\(([^)]+)\)').firstMatch(line);
+            if (pkMatch != null) {
+              String pkCol = pkMatch.group(1)!.split(',')[0].trim();
+              pkInfoList.add({
+                "Table": tableName,
+                "Column": pkCol,
+              });
             }
-            continue;
+          }
+          continue;
         }
 
         final parts = line.split(RegExp(r'\s+'));
         if (parts.length < 2) continue;
 
         String colName = parts[0];
-        String colType = parts[1]; 
+        String colType = parts[1];
 
+        // Reconstruct type if it contains parentheses split across tokens
         if (colType.contains('(') && !colType.contains(')')) {
-            for (int i = 2; i < parts.length; i++) {
-                colType += parts[i];
-                if (parts[i].contains(')')) break;
-            }
+          for (int i = 2; i < parts.length; i++) {
+            colType += parts[i];
+            if (parts[i].contains(')')) break;
+          }
         }
-        
+
         colType = colType.replaceAll(' ', '');
         if (colType.endsWith(',')) colType = colType.substring(0, colType.length - 1);
 
         bool isIdentity = line.toUpperCase().contains('IDENTITY') || line.toUpperCase().contains('AUTO_INCREMENT');
         String upperType = colType.toUpperCase();
 
+        // Normalize SQL types to the backend's supported subset
         if (upperType.startsWith('INT') || upperType == 'SERIAL') colType = 'int';
         else if (upperType == 'TEXT') colType = 'varchar(MAX)';
         else if (upperType == 'BOOL' || upperType == 'BOOLEAN') colType = 'bit';
         else if (upperType == 'DATETIME') colType = 'datetime';
         else if (upperType == 'BLOB') colType = 'varbinary(MAX)';
 
-        // --- CAMBIO CLAVE 3 ---
         columnsList.add({
-          "Table": tableName,     // Mayúscula
-          "Name": colName,        // Mayúscula
-          "Type": colType,        // Mayúscula
-          "Is_Identity": isIdentity, // Mayúscula 'Is' y mayúscula 'Identity'
+          "Table": tableName,
+          "Name": colName,
+          "Type": colType,
+          "Is_Identity": isIdentity,
         });
 
+        // Inline PRIMARY KEY declaration (e.g. `id INT PRIMARY KEY`)
         if (line.toUpperCase().contains('PRIMARY KEY')) {
-             pkInfoList.add({
-                 "Table": tableName, // Mayúscula
-                 "Column": colName   // Mayúscula
-             });
+          pkInfoList.add({
+            "Table": tableName,
+            "Column": colName,
+          });
         }
       }
     }
 
-    // =========================================================
-    // 🔑 ESTRUCTURA FINAL (PASCAL CASE EXACTO)
-    // =========================================================
     return {
-      "database_name": dbName, // Este se queda así por [JsonPropertyName("database_name")]
-      "Tables": tablesList,    // Mayúscula T
-      "Columns": columnsList,  // Mayúscula C
-      "Pk_Info": pkInfoList,   // Mayúscula P
+      "database_name": dbName,
+      "Tables": tablesList,
+      "Columns": columnsList,
+      "Pk_Info": pkInfoList,
     };
   }
 
+  /// Splits a raw column definition block by commas, ignoring commas that
+  /// appear inside parentheses (e.g. `DECIMAL(10, 2)` or `CHECK(...)`).
   static List<String> _splitColumnsRespectingParentheses(String text) {
     List<String> result = [];
     int parenthesisLevel = 0;

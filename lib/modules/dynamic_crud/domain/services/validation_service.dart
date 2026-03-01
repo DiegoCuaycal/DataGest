@@ -1,6 +1,15 @@
 import '../../data/models/column_info_model.dart';
 
+/// Service providing field-level validation logic for dynamically generated forms.
 class ValidationService {
+  /// Validates [value] against the constraints defined in [column].
+  ///
+  /// Returns an error message string if validation fails, or `null` if the
+  /// value is acceptable. Checks:
+  /// - Required fields (non-nullable columns must have a non-empty value).
+  /// - Maximum string length for character types.
+  /// - Integer and decimal parseability.
+  /// - Date/time parseability.
   static String? validateField(
     ColumnInfoModel column,
     dynamic value,
@@ -49,6 +58,7 @@ class ValidationService {
     return null;
   }
 
+  /// Returns `true` if [email] matches a standard email format.
   static bool isValidEmail(String email) {
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
@@ -56,6 +66,7 @@ class ValidationService {
     return emailRegex.hasMatch(email);
   }
 
+  /// Returns `true` if [url] is a valid HTTP or HTTPS URL.
   static bool isValidUrl(String url) {
     final urlRegex = RegExp(
       r'^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$',
@@ -63,6 +74,8 @@ class ValidationService {
     return urlRegex.hasMatch(url);
   }
 
+  /// Returns `true` if [phone] contains only digits, spaces, and common
+  /// phone separators, and has at least 7 numeric digits.
   static bool isValidPhone(String phone) {
     final phoneRegex = RegExp(r'^[\d\s\-\+\(\)]+$');
     return phoneRegex.hasMatch(phone) && phone.replaceAll(RegExp(r'[\s\-\+\(\)]'), '').length >= 7;

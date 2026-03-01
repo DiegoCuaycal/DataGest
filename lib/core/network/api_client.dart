@@ -7,7 +7,14 @@ import 'package:herramienta_case/core/config/env_config.dart';
 import 'package:herramienta_case/core/errors/exceptions.dart';
 import 'api_endpoints.dart';
 
-/// Cliente HTTP para comunicación con la API
+/// Centralized HTTP client for all API communication.
+///
+/// Wraps the [http.Client] with authentication token management,
+/// connection profile routing, consistent header injection, and
+/// structured HTTP error handling mapped to typed [AppException] subclasses.
+///
+/// The client persists the auth token and connection profile in
+/// [SharedPreferences] so they survive application restarts.
 class ApiClient {
   final http.Client _client;
   String? _authToken;
@@ -15,14 +22,18 @@ class ApiClient {
 
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
-  /// Inicializa el cliente cargando el token y perfil almacenados
+  /// Loads the persisted auth token and connection profile from [SharedPreferences].
+  ///
+  /// Must be called once during application startup before issuing any request.
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _authToken = prefs.getString(AppConfig.tokenKey);
     _connectionProfile = prefs.getString(AppConfig.connectionProfileKey);
   }
 
-  /// Establece el token de autenticación
+  /// Sets the auth [token] in memory and persists it to [SharedPreferences].
+  ///
+  /// Pass `null` to remove the stored token (i.e. on logout).
   Future<void> setAuthToken(String? token) async {
     _authToken = token;
     final prefs = await SharedPreferences.getInstance();
@@ -33,13 +44,17 @@ class ApiClient {
     }
   }
 
-  /// Obtiene el token de autenticación
+  /// Returns the current in-memory auth token, or `null` if not set.
   String? getAuthToken() => _authToken;
 
-  /// Verifica si el usuario está autenticado
+  /// Returns `true` if a non-empty auth token is currently set.
   bool isAuthenticated() => _authToken != null && _authToken!.isNotEmpty;
 
-  /// Establece el perfil de conexión al servidor
+  /// Sets the active connection [profile] and persists it to [SharedPreferences].
+  ///
+  /// The profile value is forwarded as the `X-Connection-Profile` header on
+  /// every subsequent request, allowing the backend to route traffic to the
+  /// correct server instance. Pass `null` to clear the profile.
   Future<void> setConnectionProfile(String? profile) async {
     _connectionProfile = profile;
     final prefs = await SharedPreferences.getInstance();
@@ -50,10 +65,15 @@ class ApiClient {
     }
   }
 
-  /// Obtiene el perfil de conexión actual
+  /// Returns the currently active connection profile name, or `null` if not set.
   String? getConnectionProfile() => _connectionProfile;
 
-  /// Headers base para todas las peticiones
+  /// Builds the base headers for every outgoing request.
+  ///
+  /// Always includes `Content-Type` and `Accept`. Conditionally adds
+  /// `X-Connection-Profile` for multi-server routing, `Authorization`
+  /// when [includeAuth] is true, and any [customHeaders] provided by
+  /// the caller.
   Map<String, String> _getHeaders({
     bool includeAuth = true,
     Map<String, String>? customHeaders,
@@ -63,7 +83,6 @@ class ApiClient {
       'Accept': 'application/json',
     };
 
-    // Agregar perfil de conexión si está configurado
     if (_connectionProfile != null && _connectionProfile!.isNotEmpty) {
       headers['X-Connection-Profile'] = _connectionProfile!;
     }
@@ -72,7 +91,6 @@ class ApiClient {
       headers['Authorization'] = 'Bearer $_authToken';
     }
 
-    // Agregar headers personalizados
     if (customHeaders != null) {
       headers.addAll(customHeaders);
     }
@@ -80,7 +98,7 @@ class ApiClient {
     return headers;
   }
 
-  /// Maneja errores de respuesta HTTP
+  /// Maps a non-2xx [response] to a typed [AppException].
   void _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
@@ -116,7 +134,7 @@ class ApiClient {
     }
   }
 
-  /// Extrae el mensaje de error de la respuesta
+  /// Extracts a human-readable error message from an HTTP [response] body.
   String _extractErrorMessage(http.Response response) {
     try {
       final json = jsonDecode(response.body);
@@ -126,7 +144,7 @@ class ApiClient {
     }
   }
 
-  /// Realiza una petición GET
+  /// Sends an authenticated GET request to [endpoint] and returns the decoded JSON body.
   Future<Map<String, dynamic>> get(
     String endpoint, {
     Map<String, String>? queryParameters,
@@ -159,7 +177,7 @@ class ApiClient {
     }
   }
 
-  /// Realiza una petición POST
+  /// Sends an authenticated POST request to [endpoint] with an optional JSON [body].
   Future<Map<String, dynamic>> post(
     String endpoint, {
     Map<String, dynamic>? body,
@@ -192,7 +210,7 @@ class ApiClient {
     }
   }
 
-  /// Realiza una petición PUT
+  /// Sends an authenticated PUT request to [endpoint] with an optional JSON [body].
   Future<Map<String, dynamic>> put(
     String endpoint, {
     Map<String, dynamic>? body,
@@ -221,7 +239,7 @@ class ApiClient {
     }
   }
 
-  /// Realiza una petición DELETE
+  /// Sends an authenticated DELETE request to [endpoint].
   Future<Map<String, dynamic>> delete(
     String endpoint, {
     bool includeAuth = true,
@@ -248,7 +266,7 @@ class ApiClient {
     }
   }
 
-  /// Cierra el cliente HTTP
+  /// Releases resources held by the underlying HTTP client.
   void dispose() {
     _client.close();
   }
