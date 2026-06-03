@@ -465,21 +465,13 @@ The release APK will be at `build/app/outputs/flutter-apk/app-release.apk`.
 
 ---
 
-## Screenshots
+## Authors
 
-> *Screenshots can be added here showing: Login Screen, Database Selection, Tables Menu, Dynamic List View, Dynamic Form with FK Dropdowns, Export Options, Home Dashboard*
+- **Diego Cuaycal**  
+  Software Engineer | GitHub: [@DiegoCuaycal](https://github.com/DiegoCuaycal)
 
----
-
-## Author
-
-Developed as a full-stack portfolio project demonstrating:
-- Enterprise architecture with Clean Architecture and layered design
-- Dynamic code generation from database metadata
-- Full-stack development with .NET and Flutter
-- RESTful API design with Swagger documentation
-- Multi-database support with runtime schema introspection
-- Security best practices (JWT, parameterized queries, input validation)
+- **Lizbeth Quilumba**  
+  Software Engineer | GitHub: [@lizbethquilumba](https://github.com/lizbethquilumba)
 
 ---
 
